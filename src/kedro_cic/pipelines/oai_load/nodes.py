@@ -48,7 +48,7 @@ def oai_load_records(df_records_raw: pd.DataFrame, env: str = 'dev') -> pd.DataF
             .assign(load_datetime=load_dt)
         )
 
-    df_records = _select(['record_id', 'col_id', 'title', 'date_issued', 'extract_datetime']).assign(load_datetime=load_dt)
+    df_records = _select(['record_id','col_id','title','date_issued', 'extract_datetime','_context']).assign(load_datetime=load_dt)
     df_record_creators = _explode('creators')
     df_record_descriptions = _explode('descriptions')
     df_record_types = _explode('types')
