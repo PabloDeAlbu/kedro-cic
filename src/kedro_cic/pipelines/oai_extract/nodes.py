@@ -325,6 +325,7 @@ def oai_extract_records(base_url: str, context: str, env: str, verify=None) -> p
 
     timestamp = pd.Timestamp.now(tz="UTC").normalize()
     df['extract_datetime'] = timestamp
+    df['_context'] = context
 
     return df, df.head(100)
 

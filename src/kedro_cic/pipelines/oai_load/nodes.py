@@ -1,5 +1,7 @@
 from datetime import date
+
 import pandas as pd
+
 
 def _pick_load_dt(df: pd.DataFrame):
     # Si hay una sola fecha en el batch, usala; si hay varias, quedate con la más reciente;
@@ -11,20 +13,20 @@ def _pick_load_dt(df: pd.DataFrame):
         return vals.iloc[0]
     return pd.to_datetime(vals).max().date()
 
-def oai_load_identifiers(df_identifiers_raw: pd.DataFrame)-> pd.DataFrame:
 
+def oai_load_identifiers(df_identifiers_raw: pd.DataFrame) -> pd.DataFrame:
     load_dt = _pick_load_dt(df_identifiers_raw)
 
-    df_identifiers = df_identifiers_raw[['record_id','datestamp', 'extract_datetime']].copy()
-    df_identifiers_sets = df_identifiers_raw[['record_id','set_id', 'extract_datetime']].explode('set_id')
+    df_identifiers = df_identifiers_raw[['record_id', 'datestamp', 'extract_datetime']].copy()
+    df_identifiers_sets = df_identifiers_raw[['record_id', 'set_id', 'extract_datetime']].explode('set_id')
 
     df_identifiers['load_datetime'] = load_dt
     df_identifiers_sets['load_datetime'] = load_dt
 
     return df_identifiers, df_identifiers_sets
 
-def oai_load_records(df_records_raw: pd.DataFrame, env = 'dev')-> pd.DataFrame:
 
+def oai_load_records(df_records_raw: pd.DataFrame, env: str = 'dev') -> pd.DataFrame:
     df_records_raw = df_records_raw.copy()
     load_dt = _pick_load_dt(df_records_raw)
 
@@ -46,7 +48,7 @@ def oai_load_records(df_records_raw: pd.DataFrame, env = 'dev')-> pd.DataFrame:
             .assign(load_datetime=load_dt)
         )
 
-    df_records = _select(['record_id','col_id','title','date_issued', 'extract_datetime']).assign(load_datetime=load_dt)
+    df_records = _select(['record_id', 'col_id', 'title', 'date_issued', 'extract_datetime']).assign(load_datetime=load_dt)
     df_record_creators = _explode('creators')
     df_record_descriptions = _explode('descriptions')
     df_record_types = _explode('types')
@@ -67,15 +69,14 @@ def oai_load_records(df_records_raw: pd.DataFrame, env = 'dev')-> pd.DataFrame:
 
     return df_records, df_record_creators, df_record_descriptions, \
         df_record_types, df_record_identifiers, df_record_languages, \
-            df_record_subjects, df_record_publishers, df_record_relations, \
-                df_record_rights, df_record_formats, df_record_sets
+        df_record_subjects, df_record_publishers, df_record_relations, \
+        df_record_rights, df_record_formats, df_record_sets
 
-def oai_load_sets(df: pd.DataFrame)-> pd.DataFrame:
 
+def oai_load_sets(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
     load_dt = _pick_load_dt(df)
-
     df.dropna(inplace=True)
-
     df['load_datetime'] = load_dt
 
     return df
