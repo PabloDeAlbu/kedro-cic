@@ -5,8 +5,8 @@ def oai_load_identifiers(df_identifiers_raw: pd.DataFrame) -> pd.DataFrame:
     df_identifiers = df_identifiers_raw[['record_id', 'datestamp', 'extract_datetime']]
     df_identifiers_sets = df_identifiers_raw[['record_id', 'set_id', 'extract_datetime']].explode('set_id')
 
-    df_identifiers['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_identifiers_sets['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_identifiers['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_identifiers_sets['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
 
     return df_identifiers, df_identifiers_sets
 
@@ -31,14 +31,14 @@ def oai_load_item(df_item_raw: pd.DataFrame)-> pd.DataFrame:
     df_item_relations = df_item_relations.explode('relations')
     df_item_rights = df_item_rights.explode('rights')
 
-    df_item['load_datetime'] =  pd.Timestamp.now(tz="UTC").normalize()
-    df_item_creators['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_item_types['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_item_identifiers['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_item_languages['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_item_subjects['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_item_publishers['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_item_relations['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
-    df_item_rights['load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item['_load_datetime'] =  pd.Timestamp.now(tz="UTC").normalize()
+    df_item_creators['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item_types['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item_identifiers['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item_languages['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item_subjects['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item_publishers['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item_relations['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
+    df_item_rights['_load_datetime'] = pd.Timestamp.now(tz="UTC").normalize()
 
     return df_item, df_item_creators, df_item_types, df_item_identifiers, df_item_languages, df_item_subjects, df_item_publishers, df_item_relations, df_item_rights

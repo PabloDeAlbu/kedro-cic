@@ -130,7 +130,7 @@ def oai_extract_identifiers_by_sets(base_url: str, context: str, env: str, df_se
     df = pd.DataFrame(records)
 
     timestamp = pd.Timestamp.now(tz="UTC").normalize()
-    df['extract_datetime'] = timestamp
+    df['_extract_datetime'] = timestamp
 
     return df, df_set, df.head(100)
 
@@ -209,7 +209,7 @@ def oai_extract_records_by_identifiers(base_url: str, context: str, env: str, df
     df = pd.DataFrame(records)
 
     timestamp = pd.Timestamp.now(tz="UTC").normalize()
-    df['extract_datetime'] = timestamp
+    df['_extract_datetime'] = timestamp
 
     # convierte cada lista en columnas (set_0, set_1, ...)
     sets_df = df['set_id'].apply(pd.Series)
@@ -324,7 +324,7 @@ def oai_extract_records(base_url: str, context: str, env: str, verify=None) -> p
     df = pd.DataFrame(records)
 
     timestamp = pd.Timestamp.now(tz="UTC").normalize()
-    df['extract_datetime'] = timestamp
+    df['_extract_datetime'] = timestamp
     df['_context'] = context
 
     return df, df.head(100)
@@ -374,7 +374,7 @@ def oai_extract_sets(base_url, context, env, verify=None, iteration_limit=None):
     df_sets = pd.DataFrame(all_sets)
 
     timestamp = pd.Timestamp.now(tz="UTC").normalize()
-    df_sets['extract_datetime'] = timestamp
+    df_sets['_extract_datetime'] = timestamp
 
     return df_sets
 

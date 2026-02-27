@@ -2,9 +2,9 @@ from datetime import date
 import pandas as pd
 
 def _pick_load_dt(df: pd.DataFrame):
-    if 'load_datetime' not in df.columns or df['load_datetime'].isna().all():
+    if 'load_datetime' not in df.columns or df['_load_datetime'].isna().all():
         return date.today()
-    vals = df['load_datetime'].dropna()
+    vals = df['_load_datetime'].dropna()
     if vals.nunique() == 1:
         return vals.iloc[0]
     return pd.to_datetime(vals).max().date()
@@ -101,7 +101,7 @@ def openaire_load_researchproduct(df: pd.DataFrame)-> pd.DataFrame:
         'contributor', 'contactPerson', 'coverage'
         ], inplace=True)
 
-    df_researchproduct['load_datetime'] = load_dt
+    df_researchproduct['_load_datetime'] = load_dt
 
     return df_researchproduct
 
@@ -115,7 +115,7 @@ def openaire_load_researchproduct_authors(df: pd.DataFrame)-> pd.DataFrame:
 
     df_research_author = pd.concat([df_research_author['id'], df_authors], axis=1)
 
-    df_research_author['load_datetime'] = load_dt
+    df_research_author['_load_datetime'] = load_dt
 
     return df_research_author
 
@@ -134,7 +134,7 @@ def openaire_load_researchproduct_collectedfrom(df: pd.DataFrame)-> pd.DataFrame
         axis=1
     )
 
-    df_research_collectedfrom['load_datetime'] = load_dt
+    df_research_collectedfrom['_load_datetime'] = load_dt
 
     return df_research_collectedfrom
 
@@ -145,7 +145,7 @@ def openaire_load_researchproduct_contributors(df: pd.DataFrame)-> pd.DataFrame:
     df_research_contributor = df[['id','contributors']].explode('contributors').reset_index(drop=True)
     df_research_contributor.dropna(inplace=True)
 
-    df_research_contributor['load_datetime'] = load_dt
+    df_research_contributor['_load_datetime'] = load_dt
 
     return df_research_contributor
 
@@ -155,7 +155,7 @@ def openaire_load_researchproduct_descriptions(df: pd.DataFrame)-> pd.DataFrame:
 
     df_research_description = df[['id','descriptions']].explode('descriptions').reset_index(drop=True)
 
-    df_research_description['load_datetime'] = load_dt
+    df_research_description['_load_datetime'] = load_dt
 
     return df_research_description
 
@@ -183,8 +183,8 @@ def openaire_load_researchproduct_instances(df: pd.DataFrame)-> pd.DataFrame:
 
     df_research_instances.drop(columns=['alternateIdentifiers'], inplace=True)
 
-    df_research_instances['load_datetime'] = load_dt
-    df_research_alternateidentifiers['load_datetime'] = load_dt
+    df_research_instances['_load_datetime'] = load_dt
+    df_research_alternateidentifiers['_load_datetime'] = load_dt
 
     return df_research_instances, df_research_alternateidentifiers
 
@@ -222,9 +222,9 @@ def openaire_load_researchproduct_organizations(df: pd.DataFrame)-> pd.DataFrame
         .reset_index(drop=True)
     )
     
-    df_organizations['load_datetime'] = load_dt
-    df_research_organization['load_datetime'] = load_dt
-    df_organization_pid['load_datetime'] = load_dt
+    df_organizations['_load_datetime'] = load_dt
+    df_research_organization['_load_datetime'] = load_dt
+    df_organization_pid['_load_datetime'] = load_dt
 
     return df_organizations, df_research_organization, df_organization_pid
 
@@ -236,7 +236,7 @@ def openaire_load_researchproduct_originalid(df: pd.DataFrame)-> pd.DataFrame:
 
     df_research_originalids = df_research_originalids.explode('originalIds').reset_index(drop=True)
 
-    df_research_originalids['load_datetime'] = load_dt
+    df_research_originalids['_load_datetime'] = load_dt
 
     return df_research_originalids
 
@@ -252,7 +252,7 @@ def openaire_load_researchproduct_pids(df: pd.DataFrame)-> pd.DataFrame:
     df_pid = pd.json_normalize(df_research_pid['pids'])
     
     df_research_pid = pd.concat([df_research_pid['id'], df_pid], axis=1)
-    df_research_pid['load_datetime'] = load_dt
+    df_research_pid['_load_datetime'] = load_dt
 
     return df_research_pid
 
@@ -265,7 +265,7 @@ def openaire_load_researchproduct_sources(df: pd.DataFrame)-> pd.DataFrame:
     
     df_research_sources = df_research_sources.explode('sources').reset_index(drop=True)
 
-    df_research_sources['load_datetime'] = load_dt
+    df_research_sources['_load_datetime'] = load_dt
 
     return df_research_sources
 
@@ -281,6 +281,6 @@ def openaire_load_researchproduct_subjects(df: pd.DataFrame)-> pd.DataFrame:
     df_subjects = pd.json_normalize(df_research_subjects['subjects'])
     df_research_subjects = pd.concat([df_research_subjects['id'], df_subjects],axis=1)
 
-    df_research_subjects['load_datetime'] = load_dt
+    df_research_subjects['_load_datetime'] = load_dt
 
     return df_research_subjects

@@ -20,7 +20,7 @@ def openalex_load_author(df: pd.DataFrame)-> pd.DataFrame:
     )
 
     df_author = df_author.convert_dtypes()
-    df_author['load_datetime'] = pd.to_datetime(datetime.today())
+    df_author['_load_datetime'] = pd.to_datetime(datetime.today())
     
     return df_author
 
@@ -42,7 +42,7 @@ def openalex_load_author_institution_year(df: pd.DataFrame)-> pd.DataFrame:
     df_author2affiliation.rename(columns={'institution.id':'institution_id'}, inplace=True)
     df_author2affiliation = df_author2affiliation.convert_dtypes()
 
-    df_author2affiliation['load_datetime'] = pd.to_datetime(datetime.today())
+    df_author2affiliation['_load_datetime'] = pd.to_datetime(datetime.today())
     
     return df_author2affiliation
 
@@ -65,7 +65,7 @@ def openalex_load_author_topic(df: pd.DataFrame)-> pd.DataFrame:
     df_author2topic.rename(columns={'field.id':'field_id'}, inplace=True)
     df_author2topic.rename(columns={'subfield.id':'subfield_id'}, inplace=True)
 
-    df_author2topic['load_datetime'] = pd.to_datetime(datetime.today())
+    df_author2topic['_load_datetime'] = pd.to_datetime(datetime.today())
 
     return df_author2topic
 
@@ -206,7 +206,7 @@ def openalex_load_work(df_work_raw):
     df_work.drop(columns=['best_oa_location'], inplace=True)    
 
     # Agregar la fecha de carga con formato datetime
-    df_work['load_datetime'] = pd.to_datetime(datetime.today())
+    df_work['_load_datetime'] = pd.to_datetime(datetime.today())
 
     # Convertir tipos de datos automáticamente
     df_work = df_work.convert_dtypes()
@@ -245,9 +245,9 @@ def openalex_load_work_authorships(df_work_raw):
     # Combinar work_id con la información normalizada de instituciones
     df_work2institution = df_work2institution_exploded[['work_id']].join(df_institution_norm)
     
-    df_work2author['load_datetime'] = date.today()
-    df_work2institution['load_datetime'] = date.today()
-    df_author2institution['load_datetime'] = date.today()
+    df_work2author['_load_datetime'] = date.today()
+    df_work2institution['_load_datetime'] = date.today()
+    df_author2institution['_load_datetime'] = date.today()
 
     return df_work2author, df_work2institution, df_author2institution
 
@@ -262,7 +262,7 @@ def openalex_load_work_concept(df_work_raw):
     df_work = df_work2concepts_exploded.loc[:,'id']
     df_work2concepts = pd.concat((df_work, df_work2concepts_norm), axis=1)
     
-    df_work2concepts['load_datetime'] = pd.to_datetime(datetime.today())
+    df_work2concepts['_load_datetime'] = pd.to_datetime(datetime.today())
 
     return df_work2concepts
 
@@ -272,7 +272,7 @@ def openalex_load_work_corresponding_author_ids(df_work_raw):
 
     df_work2corresponding_author_ids = df_work.explode('corresponding_author_ids')
 
-    df_work2corresponding_author_ids['load_datetime'] = pd.to_datetime(datetime.today())
+    df_work2corresponding_author_ids['_load_datetime'] = pd.to_datetime(datetime.today())
 
     return df_work2corresponding_author_ids
 
@@ -282,7 +282,7 @@ def openalex_load_work_referenced_works(df_work_raw):
     df_work2referenced_works_exploded =  df_work.explode('referenced_works')
     df_work2referenced_works = df_work2referenced_works_exploded.reset_index(drop=True)
 
-    df_work2referenced_works['load_datetime'] = pd.to_datetime(datetime.today())
+    df_work2referenced_works['_load_datetime'] = pd.to_datetime(datetime.today())
 
     return df_work2referenced_works
 
@@ -300,7 +300,7 @@ def openalex_load_work_topics(df_work_raw):
     # Creación de df con work y sus topics
     df_work2topics = pd.concat((df_work2topics_exploded['id'], df_work2topics_norm), axis=1)
 
-    df_work2topics['load_datetime'] = pd.to_datetime(datetime.today())
+    df_work2topics['_load_datetime'] = pd.to_datetime(datetime.today())
 
     return df_work2topics
 
@@ -323,7 +323,7 @@ def openalex_load_work_location(df_work_raw):
         'source_is_in_doaj', 'source_is_oa', 'source_issn_l'
     ]]
 
-    df_work_location['load_datetime'] = date.today()
+    df_work_location['_load_datetime'] = date.today()
 
     return df_work_location
 
@@ -362,7 +362,7 @@ def openalex_load_institution(df_institution_raw):
     ]
     df_institution = df_institution_raw.loc[:,expected_columns].reset_index(drop=True).copy()
 
-    df_institution['load_datetime'] = pd.to_datetime(datetime.today())
+    df_institution['_load_datetime'] = pd.to_datetime(datetime.today())
 
     # Convertir tipos de datos automáticamente
     df_institution = df_institution.astype(str)

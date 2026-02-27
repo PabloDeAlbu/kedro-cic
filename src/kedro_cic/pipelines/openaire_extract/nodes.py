@@ -159,6 +159,6 @@ def openaire_extract_researchproduct(filter_param, ror_filter_value, access_toke
 
         df[filter_param] = organization_id
 
-        df['load_datetime'] = date.today()
+        df['_load_datetime'] = date.today()
 
         return df, df.head(1000)
