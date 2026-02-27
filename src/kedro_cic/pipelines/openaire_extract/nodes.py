@@ -157,7 +157,8 @@ def openaire_extract_researchproduct(filter_param, ror_filter_value, access_toke
             cursor = api_response["header"].get("nextCursor", None)
             query_params["cursor"] = cursor
 
-        df[filter_param] = organization_id
+        df['_filter_param'] = filter_param
+        df['_filter_value'] = ror_filter_value
 
         df['_load_datetime'] = date.today()
 
