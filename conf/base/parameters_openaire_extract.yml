@@ -4,11 +4,9 @@ openaire_extract_options:
     refresh_token: REPLACE_ME
 
     filter_param: relOrganizationId
-    organization_filter_value: openorgs____::40b9f835648a3e0d057d6917dd7e54d5     ## unlp organization id    
-    ror_filter_value: https://ror.org/01tjs6929     ## unlp ror    
-
-#    filter_param: relCollectedFromDatasourceId
- #   filter_value: opendoar____::01e9565cecc4e989123f9620c1d09c09     ## sedici datasource_id
+    # ror_filter_value: https://ror.org/02s7sax82   ## cic ror
+    # ror_filter_value: https://ror.org/03cqe8w59   ## conicet ror
+    ror_filter_value: https://ror.org/01tjs6929     ## unlp ror
 
     organizations_endpoint: organizations
     organizations_filter: 'pid'
