@@ -37,6 +37,8 @@ def openaire_load_researchproduct(df: pd.DataFrame)-> pd.DataFrame:
         'contactPerson',
         'embargoEndDate',
         'dateOfCollection',        
+        '_filter_param',
+        '_filter_value',
     ]
 
     # Agregar columnas faltantes con NaN

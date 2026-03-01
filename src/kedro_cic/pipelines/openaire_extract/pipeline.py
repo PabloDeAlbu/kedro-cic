@@ -17,7 +17,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ],
             outputs=[
                 "raw/openaire/researchproduct#parquet",
-                "raw/openaire/researchproduct_dev",
+                "raw/openaire/researchproduct_dev#parquet",
                 ],
         )
     ], tags="openaire_extract")
