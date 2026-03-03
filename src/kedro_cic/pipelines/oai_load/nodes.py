@@ -20,8 +20,8 @@ def oai_load_identifiers(df_identifiers_raw: pd.DataFrame) -> pd.DataFrame:
     df_identifiers = df_identifiers_raw[['record_id', 'datestamp', 'extract_datetime']].copy()
     df_identifiers_sets = df_identifiers_raw[['record_id', 'set_id', 'extract_datetime']].explode('set_id')
 
-    df_identifiers['_load_datetime'] = date.today()
-    df_identifiers_sets['_load_datetime'] = date.today()
+    df_identifiers['_load_datetime'] = load_dt
+    df_identifiers_sets['_load_datetime'] = load_dt
 
     return df_identifiers, df_identifiers_sets
 
@@ -65,7 +65,7 @@ def oai_load_records(df_records_raw: pd.DataFrame, env: str = 'dev') -> pd.DataF
 #    sets_df = df_record_sets.pop('set_id').apply(pd.Series)
 #    sets_df = sets_df.rename(columns=lambda i: f'set_{i}')
 #    df_record_sets = pd.concat([df_record_sets, sets_df], axis=1)
-#    df_record_sets['_load_datetime'] = date.today()
+#    df_record_sets['_load_datetime'] = load_dt
 
     return df_records, df_record_creators, df_record_descriptions, \
         df_record_types, df_record_identifiers, df_record_languages, \
@@ -74,7 +74,10 @@ def oai_load_records(df_records_raw: pd.DataFrame, env: str = 'dev') -> pd.DataF
 
 
 def oai_load_sets(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()    df.dropna(inplace=True)
-    df['_load_datetime'] = date.today()
+
+    df = df.copy()
+    load_dt = _pick_load_dt(df)
+    df.dropna(inplace=True)
+    df['_load_datetime'] = load_dt
 
     return df
