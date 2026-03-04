@@ -1,99 +1,45 @@
 # kedro-cic
 
-## Overview
+Pipelines and notebooks to ingest, integrate, and curate scientometric/bibliometric data from open scholarly sources (Kedro 1.1.1).
 
-This is your new Kedro project with Kedro-Viz setup, which was generated using `kedro 0.19.8`.
+## Context
+This repository implements (as part of the thesis work) a data integration architecture for institutional *Open Science* analytics and decision support. From a modeling perspective, it combines:
+- **Integration** using **Data Vault 2.0** (normalization, lineage/traceability, and historization).
+- **Presentation/consumption** using a **dimensional model** (star-schema data marts).
 
-Take a look at the [Kedro documentation](https://docs.kedro.org) to get started.
+Layer-wise, the typical flow is: extraction/landing (raw/`ldg_`) → integration (DV/`dv_`) → exposure (DM/`dm_`).
 
-## Rules and guidelines
+## Quick requirements
+- Python 3.10+ and `pip`.
+- Install dependencies: `pip install -r requirements.txt`
+- Sensitive configuration in `conf/local/` (not versioned): tokens, credentials, DSNs, and source-specific filters.
 
-In order to get the best out of the template:
+## Running
+- By default, the project runs in `dev` mode (useful to iterate faster and avoid large loads). To change it for a single run, override the corresponding `...env` parameter via `--params`.
+- Run the full project: `kedro run`
+- Run a specific pipeline (e.g., OAI load): `kedro run --pipeline oai_load`
+- Force `dev` for a single run: `kedro run --params oai_load_options.env=dev`
+- Force `prod` for a single run: `kedro run --params oai_load_options.env=prod`
 
-* Don't remove any lines from the `.gitignore` file we provide
-* Make sure your results can be reproduced by following a [data engineering convention](https://docs.kedro.org/en/stable/faq/faq.html#what-is-data-engineering-convention)
-* Don't commit data to your repository
-* Don't commit any credentials or your local configuration to your repository. Keep all your credentials and local configuration in `conf/local/`
+## Available pipelines
+Pipeline names match the modules in `src/kedro_cic/pipelines/`:
+- OAI-PMH: `oai_extract`, `oai_load`, `oai_load_item`
+- OpenAIRE: `openaire_extract`, `openaire_load`
+- OpenAlex: `openalex_extract`, `openalex_load`
+- DSpace DB: `dspacedb`
 
-## How to install dependencies
+Examples:
+- Harvest OAI-PMH: `kedro run --pipeline oai_extract`
+- Download/ingest OpenAlex: `kedro run --pipeline openalex_extract`
+- Load OpenAIRE: `kedro run --pipeline openaire_load`
 
-Declare any dependencies in `requirements.txt` for `pip` installation.
+## Visualization (Kedro-Viz)
+- Start Kedro-Viz: `kedro viz`
 
-To install them, run:
+## Notebooks
+- Start an interactive environment: `kedro jupyter lab` (or `kedro jupyter notebook`).
 
-```
-pip install -r requirements.txt
-```
-
-## How to run your Kedro pipeline
-
-You can run your Kedro project with:
-
-```
-kedro run
-```
-
-## How to test your Kedro project
-
-Have a look at the files `src/tests/test_run.py` and `src/tests/pipelines/data_science/test_pipeline.py` for instructions on how to write your tests. Run the tests as follows:
-
-```
-pytest
-```
-
-To configure the coverage threshold, look at the `.coveragerc` file.
-
-## Project dependencies
-
-To see and update the dependency requirements for your project use `requirements.txt`. Install the project requirements with `pip install -r requirements.txt`.
-
-[Further information about project dependencies](https://docs.kedro.org/en/stable/kedro_project_setup/dependencies.html#project-specific-dependencies)
-
-## How to work with Kedro and notebooks
-
-> Note: Using `kedro jupyter` or `kedro ipython` to run your notebook provides these variables in scope: `catalog`, `context`, `pipelines` and `session`.
->
-> Jupyter, JupyterLab, and IPython are already included in the project requirements by default, so once you have run `pip install -r requirements.txt` you will not need to take any extra steps before you use them.
-
-### Jupyter
-To use Jupyter notebooks in your Kedro project, you need to install Jupyter:
-
-```
-pip install jupyter
-```
-
-After installing Jupyter, you can start a local notebook server:
-
-```
-kedro jupyter notebook
-```
-
-### JupyterLab
-To use JupyterLab, you need to install it:
-
-```
-pip install jupyterlab
-```
-
-You can also start JupyterLab:
-
-```
-kedro jupyter lab
-```
-
-### IPython
-And if you want to run an IPython session:
-
-```
-kedro ipython
-```
-
-### How to ignore notebook output cells in `git`
-To automatically strip out all output cell contents before committing to `git`, you can use tools like [`nbstripout`](https://github.com/kynan/nbstripout). For example, you can add a hook in `.git/config` with `nbstripout --install`. This will run `nbstripout` before anything is committed to `git`.
-
-> *Note:* Your output cells will be retained locally.
-
-[Further information about using notebooks for experiments within Kedro projects](https://docs.kedro.org/en/develop/notebooks_and_ipython/kedro_and_notebooks.html).
-## Package your Kedro project
-
-[Further information about building project documentation and packaging your project](https://docs.kedro.org/en/stable/tutorial/package_a_project.html).
+## Pre-merge checklist
+- Ensure tokens/credentials live only in `conf/local/` (and that no secrets are hardcoded in `conf/base/`).
+- Run the key pipelines or notebooks you plan to use in `main`.
+- Check `git status` to confirm the changes are the expected ones before opening a PR/merging.
