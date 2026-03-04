@@ -8,8 +8,8 @@ openalex_extract_options:
 
     institution_endpoint: institutions
     institution_filter: 'ror'
-    institution_ror: 'https://ror.org/02s7sax82' # cic ror
-#    institution_ror: 'https://ror.org/03cqe8w59' # conicet ror
+#    institution_ror: 'https://ror.org/02s7sax82' # cic ror
+    institution_ror: 'https://ror.org/03cqe8w59' # conicet ror
 #    institution_ror: 'https://ror.org/01tjs6929' # unlp ror
 
     work_endpoint: works
