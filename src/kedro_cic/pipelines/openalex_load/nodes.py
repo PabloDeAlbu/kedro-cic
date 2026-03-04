@@ -1,6 +1,22 @@
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime
 from pandas import json_normalize
+
+_EXTRACTED_META_COLS = ["_filter_param", "_filter_value", "_extract_datetime"]
+
+def _add_openalex_extracted_metadata(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    for col in _EXTRACTED_META_COLS:
+        if col not in df.columns:
+            df[col] = pd.NA
+    return df
+
+def _add_openalex_loaded_metadata(df: pd.DataFrame, load_datetime=None) -> pd.DataFrame:
+    df = df.copy()
+    if load_datetime is None:
+        load_datetime = datetime.today()
+    df["_load_datetime"] = pd.to_datetime(load_datetime)
+    return df
 
 def openalex_load_author(df: pd.DataFrame)-> pd.DataFrame:
     
@@ -19,15 +35,18 @@ def openalex_load_author(df: pd.DataFrame)-> pd.DataFrame:
         ]
     )
 
+    df_author = _add_openalex_extracted_metadata(df_author)
     df_author = df_author.convert_dtypes()
-    df_author['_load_datetime'] = pd.to_datetime(datetime.today())
+    df_author = _add_openalex_loaded_metadata(df_author)
     
     return df_author
 
 def openalex_load_author_institution_year(df: pd.DataFrame)-> pd.DataFrame:
 
+    df = _add_openalex_extracted_metadata(df)
+
     # Selecciono columna con id de author y afiliación
-    df_author = df.loc[:, ['id', 'affiliations']]
+    df_author = df.loc[:, ['id', 'affiliations', '_filter_param', '_filter_value', '_extract_datetime']]
     df_author = df_author.convert_dtypes()
 
     # Proceso columna 'affiliations'
@@ -42,13 +61,15 @@ def openalex_load_author_institution_year(df: pd.DataFrame)-> pd.DataFrame:
     df_author2affiliation.rename(columns={'institution.id':'institution_id'}, inplace=True)
     df_author2affiliation = df_author2affiliation.convert_dtypes()
 
-    df_author2affiliation['_load_datetime'] = pd.to_datetime(datetime.today())
+    df_author2affiliation = _add_openalex_loaded_metadata(df_author2affiliation)
     
     return df_author2affiliation
 
 def openalex_load_author_topic(df: pd.DataFrame)-> pd.DataFrame:
     
-    df_author = df.loc[:,['id', 'topics']]
+    df = _add_openalex_extracted_metadata(df)
+
+    df_author = df.loc[:, ['id', 'topics', '_filter_param', '_filter_value', '_extract_datetime']]
     df_author = df_author.convert_dtypes() 
     
     # proceso 'topics'
@@ -65,12 +86,14 @@ def openalex_load_author_topic(df: pd.DataFrame)-> pd.DataFrame:
     df_author2topic.rename(columns={'field.id':'field_id'}, inplace=True)
     df_author2topic.rename(columns={'subfield.id':'subfield_id'}, inplace=True)
 
-    df_author2topic['_load_datetime'] = pd.to_datetime(datetime.today())
+    df_author2topic = _add_openalex_loaded_metadata(df_author2topic)
 
     return df_author2topic
 
 def openalex_load_work(df_work_raw):
     """Limpia y transforma los datos de OpenAlex para su almacenamiento en una base de datos relacional."""
+
+    df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
     
     expected_columns = [
         'id',
@@ -124,7 +147,9 @@ def openalex_load_work(df_work_raw):
         # 'counts_by_year',
         'updated_date',
         'created_date',
-        'extract_datetime'
+        '_filter_param',
+        '_filter_value',
+        '_extract_datetime',
     ]
 
     df_work = df_work_raw.reindex(columns=expected_columns).reset_index(drop=True).copy()
@@ -205,8 +230,7 @@ def openalex_load_work(df_work_raw):
     df_work = pd.concat([df_work, df_best_oa_location], axis=1)
     df_work.drop(columns=['best_oa_location'], inplace=True)    
 
-    # Agregar la fecha de carga con formato datetime
-    df_work['_load_datetime'] = pd.to_datetime(datetime.today())
+    df_work = _add_openalex_loaded_metadata(df_work)
 
     # Convertir tipos de datos automáticamente
     df_work = df_work.convert_dtypes()
@@ -215,8 +239,10 @@ def openalex_load_work(df_work_raw):
 
 def openalex_load_work_authorships(df_work_raw):
 
+    df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
+
     # Seleccionar las columnas necesarias y convertir los tipos de datos
-    df_work2authorships = df_work_raw[['id', 'authorships']].convert_dtypes()
+    df_work2authorships = df_work_raw[['id', 'authorships', '_filter_param', '_filter_value', '_extract_datetime']].convert_dtypes()
     df_work2authorships.rename(columns={"id": "work_id"}, inplace=True)
 
     # Expandir la lista de authorships
@@ -227,10 +253,10 @@ def openalex_load_work_authorships(df_work_raw):
     df_authorships_norm.rename(columns={"author.id": "author_id"}, inplace=True)
     
     # Combinar work_id con la información normalizada de authorships
-    df_work2authorships = df_work2authorships_exploded[['work_id']].join(df_authorships_norm)
+    df_work2authorships = df_work2authorships_exploded[['work_id', '_filter_param', '_filter_value', '_extract_datetime']].join(df_authorships_norm)
 
     # Extraer la relación work-author
-    df_work2author = df_work2authorships[['work_id', 'author_id', 'author_position']]
+    df_work2author = df_work2authorships[['work_id', 'author_id', 'author_position', '_filter_param', '_filter_value', '_extract_datetime']]
 
     # Expandir la lista de instituciones asociadas a cada autor
     df_work2institution_exploded = df_work2authorships.explode('institutions', ignore_index=True)
@@ -240,76 +266,62 @@ def openalex_load_work_authorships(df_work_raw):
     df_institution_norm.drop(columns=['lineage'], errors='ignore', inplace=True)
 
     # Combinar author_id con la información normalizada de instituciones
-    df_author2institution = df_work2institution_exploded[['author_id']].join(df_institution_norm)
+    df_author2institution = df_work2institution_exploded[['author_id', '_filter_param', '_filter_value', '_extract_datetime']].join(df_institution_norm)
 
     # Combinar work_id con la información normalizada de instituciones
-    df_work2institution = df_work2institution_exploded[['work_id']].join(df_institution_norm)
+    df_work2institution = df_work2institution_exploded[['work_id', '_filter_param', '_filter_value', '_extract_datetime']].join(df_institution_norm)
     
-    df_work2author['_load_datetime'] = date.today()
-    df_work2institution['_load_datetime'] = date.today()
-    df_author2institution['_load_datetime'] = date.today()
+    df_work2author = _add_openalex_loaded_metadata(df_work2author)
+    df_work2institution = _add_openalex_loaded_metadata(df_work2institution)
+    df_author2institution = _add_openalex_loaded_metadata(df_author2institution)
 
     return df_work2author, df_work2institution, df_author2institution
 
 def openalex_load_work_concept(df_work_raw):
-    df_work = df_work_raw.loc[:,['id','concepts']]
+    df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
+
+    df_work = df_work_raw.loc[:, ['id', 'concepts', '_filter_param', '_filter_value', '_extract_datetime']]
     df_work = df_work.convert_dtypes()
 
     df_work2concepts_exploded = df_work.explode('concepts').reset_index(drop=True)
     df_work2concepts_norm = pd.json_normalize(df_work2concepts_exploded['concepts'])
     df_work2concepts_norm.rename(columns={'id':'concept_id'}, inplace=True)
 
-    df_work = df_work2concepts_exploded.loc[:,'id']
-    df_work2concepts = pd.concat((df_work, df_work2concepts_norm), axis=1)
+    df_work2concepts = pd.concat(
+        (df_work2concepts_exploded.loc[:, ['id', '_filter_param', '_filter_value', '_extract_datetime']], df_work2concepts_norm),
+        axis=1,
+    )
     
-    df_work2concepts['_load_datetime'] = pd.to_datetime(datetime.today())
+    df_work2concepts = _add_openalex_loaded_metadata(df_work2concepts)
 
     return df_work2concepts
 
 def openalex_load_work_corresponding_author_ids(df_work_raw):
-    df_work = df_work_raw.loc[:,['id','corresponding_author_ids']]
+    df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
+
+    df_work = df_work_raw.loc[:, ['id', 'corresponding_author_ids', '_filter_param', '_filter_value', '_extract_datetime']]
     df_work = df_work.convert_dtypes()
 
     df_work2corresponding_author_ids = df_work.explode('corresponding_author_ids')
 
-    df_work2corresponding_author_ids['_load_datetime'] = pd.to_datetime(datetime.today())
+    df_work2corresponding_author_ids = _add_openalex_loaded_metadata(df_work2corresponding_author_ids)
 
     return df_work2corresponding_author_ids
 
-def openalex_load_work_referenced_works(df_work_raw):
-    df_work = df_work_raw.loc[:,['id','referenced_works']]
-    df_work = df_work.convert_dtypes()
-    df_work2referenced_works_exploded =  df_work.explode('referenced_works')
-    df_work2referenced_works = df_work2referenced_works_exploded.reset_index(drop=True)
-
-    df_work2referenced_works['_load_datetime'] = pd.to_datetime(datetime.today())
-
-    return df_work2referenced_works
-
-
-def openalex_load_work_topics(df_work_raw):
-    df_work = df_work_raw.loc[:,['id','topics']]
-    df_work = df_work.convert_dtypes()
-    
-    # Proceso topics
-    df_work2topics_exploded = df_work.explode('topics')
-    df_work2topics_norm = pd.json_normalize(df_work2topics_exploded['topics'])
-    df_work2topics_exploded = df_work2topics_exploded.reset_index(drop=True)
-    df_work2topics_norm.rename(columns={'id':'topic_id'}, inplace=True)
-   
-    # Creación de df con work y sus topics
-    df_work2topics = pd.concat((df_work2topics_exploded['id'], df_work2topics_norm), axis=1)
-
-    df_work2topics['_load_datetime'] = pd.to_datetime(datetime.today())
-
-    return df_work2topics
-
 def openalex_load_work_location(df_work_raw):
 
-    df_work_raw.rename(columns={'id':'work_id'}, inplace=True)
+    df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
+
+    df_work_raw.rename(columns={'id': 'work_id'}, inplace=True)
     df_work_location = df_work_raw.explode('locations').reset_index(drop=True)
 
-    df_work_location = pd.concat([df_work_location['work_id'], json_normalize(df_work_location['locations'])], axis=1)
+    df_work_location = pd.concat(
+        [
+            df_work_location.loc[:, ['work_id', '_filter_param', '_filter_value', '_extract_datetime']],
+            json_normalize(df_work_location['locations']),
+        ],
+        axis=1,
+    )
 
     df_work_location.columns = df_work_location.columns.str.replace('.', '_')
 
@@ -320,14 +332,52 @@ def openalex_load_work_location(df_work_raw):
         'is_accepted', 'is_oa', 'is_published', 'landing_page_url',
         'license', 'license_id', 'pdf_url', 'version',
         # 'source_host_organization_lineage', 'source_host_organization_lineage_names', 'source_issn',
-        'source_is_in_doaj', 'source_is_oa', 'source_issn_l'
+        'source_is_in_doaj', 'source_is_oa', 'source_issn_l',
+        '_filter_param', '_filter_value', '_extract_datetime',
     ]]
 
-    df_work_location['_load_datetime'] = date.today()
+    df_work_location = _add_openalex_loaded_metadata(df_work_location)
 
     return df_work_location
 
+def openalex_load_work_referenced_works(df_work_raw):
+    df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
+
+    df_work = df_work_raw.loc[:, ['id', 'referenced_works', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_work = df_work.convert_dtypes()
+    df_work2referenced_works_exploded =  df_work.explode('referenced_works')
+    df_work2referenced_works = df_work2referenced_works_exploded.reset_index(drop=True)
+
+    df_work2referenced_works = _add_openalex_loaded_metadata(df_work2referenced_works)
+
+    return df_work2referenced_works
+
+
+def openalex_load_work_topics(df_work_raw):
+    df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
+
+    df_work = df_work_raw.loc[:, ['id', 'topics', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_work = df_work.convert_dtypes()
+    
+    # Proceso topics
+    df_work2topics_exploded = df_work.explode('topics')
+    df_work2topics_norm = pd.json_normalize(df_work2topics_exploded['topics'])
+    df_work2topics_exploded = df_work2topics_exploded.reset_index(drop=True)
+    df_work2topics_norm.rename(columns={'id':'topic_id'}, inplace=True)
+   
+    # Creación de df con work y sus topics
+    df_work2topics = pd.concat(
+        (df_work2topics_exploded.loc[:, ['id', '_filter_param', '_filter_value', '_extract_datetime']], df_work2topics_norm),
+        axis=1,
+    )
+
+    df_work2topics = _add_openalex_loaded_metadata(df_work2topics)
+
+    return df_work2topics
+
 def openalex_load_institution(df_institution_raw):
+
+    df_institution_raw = _add_openalex_extracted_metadata(df_institution_raw)
 
     expected_columns = [
         'id',
@@ -358,11 +408,13 @@ def openalex_load_institution(df_institution_raw):
         'works_api_url',
         'updated_date',
         'created_date',
-        'extract_datetime'
+        '_filter_param',
+        '_filter_value',
+        '_extract_datetime',
     ]
-    df_institution = df_institution_raw.loc[:,expected_columns].reset_index(drop=True).copy()
+    df_institution = df_institution_raw.reindex(columns=expected_columns).reset_index(drop=True).copy()
 
-    df_institution['_load_datetime'] = pd.to_datetime(datetime.today())
+    df_institution = _add_openalex_loaded_metadata(df_institution)
 
     # Convertir tipos de datos automáticamente
     df_institution = df_institution.astype(str)

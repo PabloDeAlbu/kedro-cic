@@ -73,6 +73,8 @@ def openalex_extract(institution_ror: str, filter_field: str, entity: str = 'ins
         time.sleep(1)
 
     df = pd.concat(all_dataframes, ignore_index=True) if all_dataframes else pd.DataFrame()
-    df['_extract_datetime'] = date.today()
+    df["_filter_param"] = filter_field
+    df["_filter_value"] = institution_ror
+    df["_extract_datetime"] = date.today()
 
     return df, df.head(1000)
