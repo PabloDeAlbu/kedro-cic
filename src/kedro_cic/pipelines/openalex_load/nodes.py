@@ -35,6 +35,17 @@ def openalex_load_author(df: pd.DataFrame)-> pd.DataFrame:
         ]
     )
 
+    if 'parsed_longest_name' in df_author.columns:
+        df_parsed_longest_name = json_normalize(df_author['parsed_longest_name']).reset_index(drop=True)
+        df_parsed_longest_name.rename(
+            columns=lambda col: f'parsed_longest_name.{col}',
+            inplace=True,
+        )
+        df_author = pd.concat(
+            [df_author.drop(columns=['parsed_longest_name']).reset_index(drop=True), df_parsed_longest_name],
+            axis=1,
+        )
+
     df_author = _add_openalex_extracted_metadata(df_author)
     df_author = df_author.convert_dtypes()
     df_author = _add_openalex_loaded_metadata(df_author)
