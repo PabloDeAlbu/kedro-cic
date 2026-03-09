@@ -62,14 +62,15 @@
 
 # landing
 "ldg/{source}/{tablename}":
-  type: pandas.SQLTableDataset
+  type: kedro_cic.io.truncate_append_sql_dataset.TruncateAppendSQLTableDataset
   table_name: "{tablename}"
   load_args:
     schema: "ldg_{source}"
   save_args:
     schema: "ldg_{source}"
-    if_exists: replace
   credentials: dw
+  truncate: true
+  truncate_cascade: false
 
 # staging
 "stg_{source}/{dataset}":
