@@ -1,0 +1,39 @@
+<diagram program="umletino" version="15.1"><zoom_level>6</zoom_level><help_text>Space for diagram notes</help_text><element><id>UMLClass</id><coordinates><x>342</x><y>252</y><w>168</w><h>138</h></coordinates><panel_attributes>&lt;&lt;FACT&gt;&gt;
+*fact_publications*
+--
++ publication_sk : int {PK}
++ pub_date_sk : int {FK}
++ type_sk : int {FK}
++ access_sk : int {FK}
+--
++ doi : string
++ title : string
++ citation_count : int
++ page_count : int
+bg=blue</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>102</x><y>258</y><w>150</w><h>120</h></coordinates><panel_attributes>&lt;&lt;DIM&gt;&gt;
+*dim_date*
+--
++ date_sk : int {PK}
+--
++ full_date : date
++ year : int
++ quarter : int
++ month : int
++ day : int
++ month_name : string
+bg=green</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>594</x><y>276</y><w>150</w><h>108</h></coordinates><panel_attributes>&lt;&lt;DIM&gt;&gt;
+*dim_resource_type*
+--
++ type_sk : int {PK}
+--
++ resource_type : string (COAR)
++ subtype : string
+bg=green</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>348</x><y>456</y><w>150</w><h>102</h></coordinates><panel_attributes>&lt;&lt;DIM&gt;&gt;
+*dim_access_rights*
+--
++ access_sk : int {PK}
+--
++ access_category : string (COAR)
++ license : string
++ access_url : string
+bg=green</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>246</x><y>312</y><w>108</w><h>18</h></coordinates><panel_attributes>lt=-</panel_attributes><additional_attributes>10;10;160;10</additional_attributes></element><element><id>Relation</id><coordinates><x>504</x><y>312</y><w>102</w><h>18</h></coordinates><panel_attributes>lt=-</panel_attributes><additional_attributes>10;10;150;10</additional_attributes></element><element><id>Relation</id><coordinates><x>414</x><y>384</y><w>18</w><h>84</h></coordinates><panel_attributes>lt=-</panel_attributes><additional_attributes>10;10;10;120</additional_attributes></element></diagram>
