@@ -25,19 +25,19 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="openaire_load_researchproduct_authors",
             func=openaire_load_researchproduct_authors,
             inputs="raw/openaire/researchproduct#parquet",
-            outputs="ldg/openaire/researchproduct_authors",
+            outputs="ldg/openaire/map_researchproduct_author",
         ),
         Node(
             name="openaire_load_researchproduct_collectedfrom",
             func=openaire_load_researchproduct_collectedfrom,
             inputs="raw/openaire/researchproduct#parquet",
-            outputs="ldg/openaire/researchproduct_collectedfrom"
+            outputs="ldg/openaire/map_researchproduct_collectedfrom"
         ),
         Node(
             name="openaire_load_researchproduct_contributors",
             func=openaire_load_researchproduct_contributors,
             inputs="raw/openaire/researchproduct#parquet",
-            outputs="ldg/openaire/researchproduct_contributors"
+            outputs="ldg/openaire/map_researchproduct_contributor"
         ),
         # node(
         #     name="openaire_load_researchproduct_descriptions",
@@ -50,8 +50,8 @@ def create_pipeline(**kwargs) -> Pipeline:
             func=openaire_load_researchproduct_instances,
             inputs="raw/openaire/researchproduct#parquet",
             outputs=[
-                "ldg/openaire/researchproduct_instances",
-                "ldg/openaire/researchproduct_alternateidentifiers",
+                "ldg/openaire/map_researchproduct_instance",
+                "ldg/openaire/map_researchproduct_alternateidentifier",
             ]
         ),
         Node(
@@ -60,32 +60,32 @@ def create_pipeline(**kwargs) -> Pipeline:
             inputs="raw/openaire/researchproduct#parquet",
             outputs=[
                 "ldg/openaire/organization",
-                "ldg/openaire/researchproduct_organizations",
-                "ldg/openaire/organization_pids",
+                "ldg/openaire/map_researchproduct_organization",
+                "ldg/openaire/map_organization_pid",
             ]
         ),
         Node(
             name="openaire_load_researchproduct_originalid",
             func=openaire_load_researchproduct_originalid,
             inputs="raw/openaire/researchproduct#parquet",
-            outputs="ldg/openaire/researchproduct_originalid"
+            outputs="ldg/openaire/map_researchproduct_originalid"
         ),
         Node(
             name="openaire_load_researchproduct_pids",
             func=openaire_load_researchproduct_pids,
             inputs="raw/openaire/researchproduct#parquet",
-            outputs="ldg/openaire/researchproduct_pids"
+            outputs="ldg/openaire/map_researchproduct_pid"
         ),
         Node(
             name="openaire_load_researchproduct_sources",
             func=openaire_load_researchproduct_sources,
             inputs="raw/openaire/researchproduct#parquet",
-            outputs="ldg/openaire/researchproduct_sources"
+            outputs="ldg/openaire/map_researchproduct_source"
         ),
         Node(
             name="openaire_load_researchproduct_subjects",
             func=openaire_load_researchproduct_subjects,
             inputs="raw/openaire/researchproduct#parquet",
-            outputs="ldg/openaire/researchproduct_subjects"
+            outputs="ldg/openaire/map_researchproduct_subject"
         ),
     ], tags="openaire_load")

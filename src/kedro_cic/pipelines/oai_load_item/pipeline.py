@@ -13,7 +13,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             inputs="raw/oai/identifiers#parquet",
             outputs=[
                 "ldg/oai/identifiers",
-                "ldg/oai/identifiers_sets",
+                "ldg/oai/map_identifier_set",
             ],
         ),
         Node(
@@ -24,14 +24,14 @@ def create_pipeline(**kwargs) -> Pipeline:
             ],
             outputs=[
                 "ldg/oai/item",
-                "ldg/oai/item_creators",
-                "ldg/oai/item_types",
-                "ldg/oai/item_identifiers",
-                "ldg/oai/item_languages",
-                "ldg/oai/item_subjects",
-                "ldg/oai/item_publishers",
-                "ldg/oai/item_relations",
-                "ldg/oai/item_rights",
+                "ldg/oai/map_item_creator",
+                "ldg/oai/map_item_type",
+                "ldg/oai/map_item_identifier",
+                "ldg/oai/map_item_language",
+                "ldg/oai/map_item_subject",
+                "ldg/oai/map_item_publisher",
+                "ldg/oai/map_item_relation",
+                "ldg/oai/map_item_right",
             ],
         ),
     ], tags="oai_load")

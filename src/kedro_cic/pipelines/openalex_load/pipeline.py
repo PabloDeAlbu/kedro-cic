@@ -25,7 +25,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="openalex_load_author_institution_year",
             func=openalex_load_author_institution_year,
             inputs='raw/openalex/author#parquet',
-            outputs='ldg/openalex/author_institution_year'
+            outputs='ldg/openalex/map_author_institution_year'
             ),
         Node(
             name="openalex_load_author_topic",
@@ -49,25 +49,25 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="openalex_load_work_concept",
             func=openalex_load_work_concept,
             inputs='raw/openalex/work#parquet',
-            outputs='ldg/openalex/map_work_concepts'
+            outputs='ldg/openalex/map_work_concept'
             ),
         Node(
             name="openalex_load_work_corresponding_author_ids",
             func=openalex_load_work_corresponding_author_ids,
             inputs='raw/openalex/work#parquet',
-            outputs='ldg/openalex/map_work_corresponding_author_ids'
+            outputs='ldg/openalex/map_work_corresponding_author_id'
             ),
         Node(
             name="openalex_load_work_referenced_works",
             func=openalex_load_work_referenced_works,
             inputs='raw/openalex/work#parquet',
-            outputs='ldg/openalex/map_work_referenced_works'
+            outputs='ldg/openalex/map_work_referenced_work'
             ),
         Node(
             name="openalex_load_work_topics",
             func=openalex_load_work_topics,
             inputs='raw/openalex/work#parquet',
-            outputs='ldg/openalex/map_work_topics'
+            outputs='ldg/openalex/map_work_topic'
             ),
         Node(
             name="openalex_load_work_location",
