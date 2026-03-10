@@ -54,3 +54,94 @@ def test_openalex_load_author_expands_parsed_longest_name():
     assert result.loc[0, "parsed_longest_name.first"] == "augusta"
     assert result.loc[0, "parsed_longest_name.last"] == "lovelace"
     assert result.loc[0, "parsed_longest_name.middle"] == "ada"
+
+
+def test_openalex_load_work_drops_residual_primary_location_source_column():
+    nodes = _load_nodes_module()
+    df = pd.DataFrame(
+        [
+            {
+                "id": "https://openalex.org/W1",
+                "title": "Test work",
+                "display_name": "Test work",
+                "publication_year": 2024,
+                "publication_date": "2024-01-01",
+                "ids": {
+                    "doi": "https://doi.org/10.1234/example",
+                    "openalex": "https://openalex.org/W1",
+                },
+                "language": "en",
+                "primary_location": {
+                    "id": "doi:10.1234/example",
+                    "is_accepted": True,
+                    "is_oa": False,
+                    "is_published": True,
+                    "landing_page_url": "https://doi.org/10.1234/example",
+                    "license": None,
+                    "license_id": None,
+                    "pdf_url": None,
+                    "raw_source_name": "Example Journal",
+                    "raw_type": "journal-article",
+                    "source": None,
+                    "version": "publishedVersion",
+                },
+                "type": "article",
+                "type_crossref": None,
+                "open_access": {
+                    "any_repository_has_fulltext": False,
+                    "is_oa": False,
+                    "oa_status": "closed",
+                    "oa_url": None,
+                },
+                "countries_distinct_count": 1,
+                "institutions_distinct_count": 1,
+                "apc_list": None,
+                "apc_paid": None,
+                "fwci": 1.0,
+                "has_fulltext": False,
+                "fulltext_origin": None,
+                "cited_by_count": 0,
+                "citation_normalized_percentile": {
+                    "is_in_top_10_percent": False,
+                    "is_in_top_1_percent": False,
+                    "value": 0.0,
+                },
+                "cited_by_percentile_year": {"max": 0, "min": 0},
+                "biblio": {
+                    "first_page": "1",
+                    "issue": "1",
+                    "last_page": "2",
+                    "volume": "1",
+                },
+                "is_retracted": False,
+                "is_paratext": False,
+                "primary_topic": {
+                    "display_name": "Topic",
+                    "id": "https://openalex.org/T1",
+                    "score": 0.5,
+                    "domain": {
+                        "display_name": "Domain",
+                        "id": "https://openalex.org/domains/1",
+                    },
+                    "field": {
+                        "display_name": "Field",
+                        "id": "https://openalex.org/fields/1",
+                    },
+                    "subfield": {
+                        "display_name": "Subfield",
+                        "id": "https://openalex.org/subfields/1",
+                    },
+                },
+                "locations_count": 1,
+                "best_oa_location": None,
+                "referenced_works_count": 0,
+                "cited_by_api_url": None,
+                "updated_date": "2026-03-08T12:20:35",
+                "created_date": "2016-06-24T00:00:00",
+            }
+        ]
+    )
+
+    result = nodes.openalex_load_work(df)
+
+    assert "primary_location.source" not in result.columns

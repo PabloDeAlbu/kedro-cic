@@ -179,11 +179,13 @@ def openalex_load_work(df_work_raw):
     df_primary_location = pd.json_normalize(df_work['primary_location']).reset_index(drop=True)
     df_primary_location.rename(columns=lambda col: f'primary_location.{col}', inplace=True)
     df_primary_location.drop(columns=[
+        'primary_location.source',
         'primary_location.source.issn',
         'primary_location.source.host_organization_lineage',
         'primary_location.source.host_organization_lineage_names'
         ],
-        inplace=True)
+        inplace=True,
+        errors='ignore')
 
     df_work = pd.concat([df_work, df_primary_location], axis=1)
     df_work.drop(columns=['primary_location'], inplace=True)    
@@ -236,7 +238,7 @@ def openalex_load_work(df_work_raw):
         'best_oa_location.source.host_organization_lineage',
         'best_oa_location.source.host_organization_lineage_names',
         'best_oa_location.source.issn',
-    ], inplace=True)
+    ], inplace=True, errors='ignore')
     
     df_work = pd.concat([df_work, df_best_oa_location], axis=1)
     df_work.drop(columns=['best_oa_location'], inplace=True)    
