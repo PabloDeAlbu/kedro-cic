@@ -11,6 +11,20 @@
     schema: "public"
   credentials: "dspacedb"
 
+"dspace5/public/{table}":
+  type: pandas.SQLTableDataset
+  table_name: "{table}"
+  load_args:
+    schema: "public"
+  credentials: "dspace5"
+
+"dspacedb/dspace/{table}":
+  type: pandas.SQLTableDataset
+  table_name: "{table}"
+  load_args:
+    schema: "dspace"
+  credentials: "dspacedb"
+
 "raw/{source}/{entity}":
   type: pandas.CSVDataset
   filepath: "data/01_raw/{source}/{entity}.csv"
