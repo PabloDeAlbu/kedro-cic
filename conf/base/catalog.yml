@@ -75,6 +75,18 @@
       layer: primary
 
 # landing
+"ldg/dspace5/metadatavalue":
+  type: kedro_cic.io.truncate_append_sql_dataset.TruncateAppendSQLTableDataset
+  table_name: "metadatavalue"
+  load_args:
+    schema: "ldg_dspace5"
+  save_args:
+    schema: "ldg_dspace5"
+    chunksize: 100
+  credentials: dw
+  truncate: true
+  truncate_cascade: false
+
 "ldg/{source}/{tablename}":
   type: kedro_cic.io.truncate_append_sql_dataset.TruncateAppendSQLTableDataset
   table_name: "{tablename}"
