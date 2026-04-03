@@ -25,9 +25,11 @@ openalex_extract_options:
     work_filter: 'institutions.ror'
     work_query_options:
         per_page: 200
-        extra_filters: {}
+        extra_filters:
+            publication_year: 2024
         # Ejemplos:
         # extra_filters:
+        #     publication_year: 2024
         #     from_publication_date: '2024-01-01'
         #     to_publication_date: '2024-12-31'
         #     type: article
