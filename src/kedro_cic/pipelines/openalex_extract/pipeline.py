@@ -21,6 +21,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                 "params:openalex_extract_options.work_filter",
                 "params:openalex_extract_options.work_endpoint",
                 "params:openalex_extract_options.env",
+                "params:openalex_extract_options.work_query_options",
             ],
             outputs=["raw/openalex/work#parquet","raw/openalex/work_dev#parquet"],
         ),
@@ -32,6 +33,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                 "params:openalex_extract_options.author_filter",
                 "params:openalex_extract_options.author_endpoint",
                 "params:openalex_extract_options.env",
+                "params:openalex_extract_options.author_query_options",
             ],
             outputs=[
                 "raw/openalex/author#parquet",
@@ -46,6 +48,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                 "params:openalex_extract_options.institution_filter",
                 "params:openalex_extract_options.institution_endpoint",
                 "params:openalex_extract_options.env",
+                "params:openalex_extract_options.institution_query_options",
             ],
             outputs=[
                 "raw/openalex/institution#parquet",
@@ -60,6 +63,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                 "params:openalex_extract_options.funder_filter",
                 "params:openalex_extract_options.funder_endpoint",
                 "params:openalex_extract_options.env",
+                "params:openalex_extract_options.funder_query_options",
             ],
             outputs=[
                 "raw/openalex/funder#parquet",

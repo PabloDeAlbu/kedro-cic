@@ -1,4 +1,5 @@
 from importlib.util import module_from_spec, spec_from_file_location
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -62,6 +63,26 @@ def test_openalex_load_work_drops_residual_primary_location_source_column():
         [
             {
                 "id": "https://openalex.org/W1",
+                "source_system": "openalex",
+                "entity_type": "work",
+                "extract_datetime": "2026-03-08 12:20:35",
+                "extract_date": "2026-03-08",
+                "institution_ror": "https://ror.org/01tjs6929",
+                "extract_filters": json.dumps(
+                    {
+                        "institutions.ror": "https://ror.org/01tjs6929",
+                        "per_page": 200,
+                        "type": "article",
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                "extract_filter_label": "institutions.ror:https://ror.org/01tjs6929",
+                "endpoint": "works",
+                "api_path": "/works",
+                "_filter_param": "institutions.ror",
+                "_filter_value": "https://ror.org/01tjs6929",
+                "_extract_datetime": "2026-03-08 12:20:35",
                 "title": "Test work",
                 "display_name": "Test work",
                 "publication_year": 2024,
@@ -145,3 +166,17 @@ def test_openalex_load_work_drops_residual_primary_location_source_column():
     result = nodes.openalex_load_work(df)
 
     assert "primary_location.source" not in result.columns
+    assert result.loc[0, "source_system"] == "openalex"
+    assert result.loc[0, "entity_type"] == "work"
+    assert result.loc[0, "institution_ror"] == "https://ror.org/01tjs6929"
+    assert result.loc[0, "extract_filters"] == json.dumps(
+        {
+            "institutions.ror": "https://ror.org/01tjs6929",
+            "per_page": 200,
+            "type": "article",
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    assert pd.notna(result.loc[0, "extract_datetime"])
+    assert pd.notna(result.loc[0, "_load_datetime"])

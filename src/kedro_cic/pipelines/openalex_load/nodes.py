@@ -1,21 +1,55 @@
 import pandas as pd
-from datetime import datetime
 from pandas import json_normalize
 
-_EXTRACTED_META_COLS = ["_filter_param", "_filter_value", "_extract_datetime"]
+_CORE_EXTRACTED_META_COLS = [
+    "source_system",
+    "entity_type",
+    "extract_datetime",
+    "extract_date",
+    "institution_ror",
+    "extract_filters",
+    "extract_filter_label",
+    "endpoint",
+    "api_path",
+]
+_LEGACY_EXTRACTED_META_COLS = ["_filter_param", "_filter_value", "_extract_datetime"]
+_EXTRACTED_META_COLS = [*_CORE_EXTRACTED_META_COLS, *_LEGACY_EXTRACTED_META_COLS]
+
+
+def _select_with_metadata(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    df = _add_openalex_extracted_metadata(df)
+    return df.loc[:, [*columns, *_EXTRACTED_META_COLS]].copy()
+
+
+def _stringify_object_columns(
+    df: pd.DataFrame,
+    exclude_columns: list[str] | None = None,
+) -> pd.DataFrame:
+    exclude_columns = set(exclude_columns or [])
+    for column in df.columns:
+        if column in exclude_columns:
+            continue
+        if pd.api.types.is_object_dtype(df[column]):
+            df[column] = df[column].where(df[column].notna(), pd.NA).astype("string")
+    return df
 
 def _add_openalex_extracted_metadata(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     for col in _EXTRACTED_META_COLS:
         if col not in df.columns:
             df[col] = pd.NA
+    df["extract_datetime"] = pd.to_datetime(df["extract_datetime"], errors="coerce")
+    df["_extract_datetime"] = pd.to_datetime(df["_extract_datetime"], errors="coerce")
+    if "extract_date" in df.columns:
+        df["extract_date"] = pd.to_datetime(df["extract_date"], errors="coerce").dt.date
     return df
 
 def _add_openalex_loaded_metadata(df: pd.DataFrame, load_datetime=None) -> pd.DataFrame:
     df = df.copy()
     if load_datetime is None:
-        load_datetime = datetime.today()
-    df["_load_datetime"] = pd.to_datetime(load_datetime)
+        load_datetime = pd.Timestamp.now(tz="UTC").floor("s").tz_localize(None)
+    load_datetime = pd.to_datetime(load_datetime)
+    df["_load_datetime"] = load_datetime
     return df
 
 def openalex_load_author(df: pd.DataFrame)-> pd.DataFrame:
@@ -54,10 +88,8 @@ def openalex_load_author(df: pd.DataFrame)-> pd.DataFrame:
 
 def openalex_load_author_institution_year(df: pd.DataFrame)-> pd.DataFrame:
 
-    df = _add_openalex_extracted_metadata(df)
-
     # Selecciono columna con id de author y afiliación
-    df_author = df.loc[:, ['id', 'affiliations', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_author = _select_with_metadata(df, ['id', 'affiliations'])
     df_author = df_author.convert_dtypes()
 
     # Proceso columna 'affiliations'
@@ -77,10 +109,8 @@ def openalex_load_author_institution_year(df: pd.DataFrame)-> pd.DataFrame:
     return df_author2affiliation
 
 def openalex_load_author_topic(df: pd.DataFrame)-> pd.DataFrame:
-    
-    df = _add_openalex_extracted_metadata(df)
 
-    df_author = df.loc[:, ['id', 'topics', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_author = _select_with_metadata(df, ['id', 'topics'])
     df_author = df_author.convert_dtypes() 
     
     # proceso 'topics'
@@ -158,6 +188,7 @@ def openalex_load_work(df_work_raw):
         # 'counts_by_year',
         'updated_date',
         'created_date',
+        *_CORE_EXTRACTED_META_COLS,
         '_filter_param',
         '_filter_value',
         '_extract_datetime',
@@ -255,7 +286,7 @@ def openalex_load_work_authorships(df_work_raw):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
     # Seleccionar las columnas necesarias y convertir los tipos de datos
-    df_work2authorships = df_work_raw[['id', 'authorships', '_filter_param', '_filter_value', '_extract_datetime']].convert_dtypes()
+    df_work2authorships = _select_with_metadata(df_work_raw, ['id', 'authorships']).convert_dtypes()
     df_work2authorships.rename(columns={"id": "work_id"}, inplace=True)
 
     # Expandir la lista de authorships
@@ -266,10 +297,10 @@ def openalex_load_work_authorships(df_work_raw):
     df_authorships_norm.rename(columns={"author.id": "author_id"}, inplace=True)
     
     # Combinar work_id con la información normalizada de authorships
-    df_work2authorships = df_work2authorships_exploded[['work_id', '_filter_param', '_filter_value', '_extract_datetime']].join(df_authorships_norm)
+    df_work2authorships = df_work2authorships_exploded[['work_id', *_EXTRACTED_META_COLS]].join(df_authorships_norm)
 
     # Extraer la relación work-author
-    df_work2author = df_work2authorships[['work_id', 'author_id', 'author_position', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_work2author = df_work2authorships[['work_id', 'author_id', 'author_position', *_EXTRACTED_META_COLS]]
 
     # Expandir la lista de instituciones asociadas a cada autor
     df_work2institution_exploded = df_work2authorships.explode('institutions', ignore_index=True)
@@ -279,10 +310,10 @@ def openalex_load_work_authorships(df_work_raw):
     df_institution_norm.drop(columns=['lineage'], errors='ignore', inplace=True)
 
     # Combinar author_id con la información normalizada de instituciones
-    df_author2institution = df_work2institution_exploded[['author_id', '_filter_param', '_filter_value', '_extract_datetime']].join(df_institution_norm)
+    df_author2institution = df_work2institution_exploded[['author_id', *_EXTRACTED_META_COLS]].join(df_institution_norm)
 
     # Combinar work_id con la información normalizada de instituciones
-    df_work2institution = df_work2institution_exploded[['work_id', '_filter_param', '_filter_value', '_extract_datetime']].join(df_institution_norm)
+    df_work2institution = df_work2institution_exploded[['work_id', *_EXTRACTED_META_COLS]].join(df_institution_norm)
     
     df_work2author = _add_openalex_loaded_metadata(df_work2author)
     df_work2institution = _add_openalex_loaded_metadata(df_work2institution)
@@ -293,7 +324,7 @@ def openalex_load_work_authorships(df_work_raw):
 def openalex_load_work_concept(df_work_raw):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
-    df_work = df_work_raw.loc[:, ['id', 'concepts', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_work = _select_with_metadata(df_work_raw, ['id', 'concepts'])
     df_work = df_work.convert_dtypes()
 
     df_work2concepts_exploded = df_work.explode('concepts').reset_index(drop=True)
@@ -301,7 +332,7 @@ def openalex_load_work_concept(df_work_raw):
     df_work2concepts_norm.rename(columns={'id':'concept_id'}, inplace=True)
 
     df_work2concepts = pd.concat(
-        (df_work2concepts_exploded.loc[:, ['id', '_filter_param', '_filter_value', '_extract_datetime']], df_work2concepts_norm),
+        (df_work2concepts_exploded.loc[:, ['id', *_EXTRACTED_META_COLS]], df_work2concepts_norm),
         axis=1,
     )
     
@@ -312,7 +343,7 @@ def openalex_load_work_concept(df_work_raw):
 def openalex_load_work_corresponding_author_ids(df_work_raw):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
-    df_work = df_work_raw.loc[:, ['id', 'corresponding_author_ids', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_work = _select_with_metadata(df_work_raw, ['id', 'corresponding_author_ids'])
     df_work = df_work.convert_dtypes()
 
     df_work2corresponding_author_ids = df_work.explode('corresponding_author_ids')
@@ -330,7 +361,7 @@ def openalex_load_work_location(df_work_raw):
 
     df_work_location = pd.concat(
         [
-            df_work_location.loc[:, ['work_id', '_filter_param', '_filter_value', '_extract_datetime']],
+            df_work_location.loc[:, ['work_id', *_EXTRACTED_META_COLS]],
             json_normalize(df_work_location['locations']),
         ],
         axis=1,
@@ -346,7 +377,7 @@ def openalex_load_work_location(df_work_raw):
         'license', 'license_id', 'pdf_url', 'version',
         # 'source_host_organization_lineage', 'source_host_organization_lineage_names', 'source_issn',
         'source_is_in_doaj', 'source_is_oa', 'source_issn_l',
-        '_filter_param', '_filter_value', '_extract_datetime',
+        *_EXTRACTED_META_COLS,
     ]]
 
     df_work_location = _add_openalex_loaded_metadata(df_work_location)
@@ -356,7 +387,7 @@ def openalex_load_work_location(df_work_raw):
 def openalex_load_work_referenced_works(df_work_raw):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
-    df_work = df_work_raw.loc[:, ['id', 'referenced_works', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_work = _select_with_metadata(df_work_raw, ['id', 'referenced_works'])
     df_work = df_work.convert_dtypes()
     df_work2referenced_works_exploded =  df_work.explode('referenced_works')
     df_work2referenced_works = df_work2referenced_works_exploded.reset_index(drop=True)
@@ -369,7 +400,7 @@ def openalex_load_work_referenced_works(df_work_raw):
 def openalex_load_work_topics(df_work_raw):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
-    df_work = df_work_raw.loc[:, ['id', 'topics', '_filter_param', '_filter_value', '_extract_datetime']]
+    df_work = _select_with_metadata(df_work_raw, ['id', 'topics'])
     df_work = df_work.convert_dtypes()
     
     # Proceso topics
@@ -380,7 +411,7 @@ def openalex_load_work_topics(df_work_raw):
    
     # Creación de df con work y sus topics
     df_work2topics = pd.concat(
-        (df_work2topics_exploded.loc[:, ['id', '_filter_param', '_filter_value', '_extract_datetime']], df_work2topics_norm),
+        (df_work2topics_exploded.loc[:, ['id', *_EXTRACTED_META_COLS]], df_work2topics_norm),
         axis=1,
     )
 
@@ -421,6 +452,7 @@ def openalex_load_institution(df_institution_raw):
         'works_api_url',
         'updated_date',
         'created_date',
+        *_CORE_EXTRACTED_META_COLS,
         '_filter_param',
         '_filter_value',
         '_extract_datetime',
@@ -429,7 +461,15 @@ def openalex_load_institution(df_institution_raw):
 
     df_institution = _add_openalex_loaded_metadata(df_institution)
 
-    # Convertir tipos de datos automáticamente
-    df_institution = df_institution.astype(str)
+    df_institution = _stringify_object_columns(
+        df_institution,
+        exclude_columns=[
+            "extract_datetime",
+            "_extract_datetime",
+            "extract_date",
+            "_load_datetime",
+        ],
+    )
+    df_institution = df_institution.convert_dtypes()
 
     return df_institution

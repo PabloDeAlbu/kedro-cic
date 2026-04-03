@@ -1,8 +1,8 @@
-from datetime import date
 import json
-import requests
-import pandas as pd
 import time
+
+import pandas as pd
+import requests
 
 
 def clean_openalex_institution(df: pd.DataFrame) -> pd.DataFrame:
@@ -14,7 +14,76 @@ def clean_openalex_institution(df: pd.DataFrame) -> pd.DataFrame:
         )
     return df
 
-def openalex_extract(institution_ror: str, filter_field: str, entity: str = 'institutions', env: str = 'dev', cleaner=None):
+
+def _format_openalex_filter_value(value):
+    if isinstance(value, bool):
+        return str(value).lower()
+    return value
+
+def _build_openalex_filter_string(
+    filter_field: str,
+    institution_ror: str,
+    extra_filters: dict | None = None,
+) -> tuple[str, dict]:
+    effective_filters = {filter_field: institution_ror}
+    if extra_filters:
+        effective_filters.update(
+            {
+                key: value
+                for key, value in extra_filters.items()
+                if value is not None and value != ""
+            }
+        )
+
+    filter_string = ",".join(
+        f"{key}:{_format_openalex_filter_value(value)}"
+        for key, value in effective_filters.items()
+    )
+    return filter_string, effective_filters
+
+
+def _add_openalex_extract_metadata(
+    df: pd.DataFrame,
+    *,
+    institution_ror: str,
+    filter_field: str,
+    entity: str,
+    effective_filters: dict,
+) -> pd.DataFrame:
+    extract_ts = pd.Timestamp.now(tz="UTC").floor("s").tz_localize(None)
+    extract_filters_json = json.dumps(
+        effective_filters,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    enriched_df = df.copy()
+    enriched_df["source_system"] = "openalex"
+    enriched_df["entity_type"] = entity.removesuffix("s")
+    enriched_df["extract_datetime"] = extract_ts
+    enriched_df["extract_date"] = extract_ts.date()
+    enriched_df["institution_ror"] = institution_ror or pd.NA
+    enriched_df["extract_filters"] = extract_filters_json
+    enriched_df["extract_filter_label"] = f"{filter_field}:{institution_ror}"
+    enriched_df["endpoint"] = entity
+    enriched_df["api_path"] = f"/{entity}"
+
+    # Legacy aliases kept for current downstream compatibility.
+    enriched_df["_filter_param"] = filter_field
+    enriched_df["_filter_value"] = institution_ror
+    enriched_df["_extract_datetime"] = extract_ts
+    return enriched_df
+
+
+def openalex_extract(
+    institution_ror: str,
+    filter_field: str,
+    entity: str = "institutions",
+    env: str = "dev",
+    query_options: dict | None = None,
+    cleaner=None,
+):
     """
     Fetch data from OpenAlex API for a given entity and institution ROR.
 
@@ -30,19 +99,31 @@ def openalex_extract(institution_ror: str, filter_field: str, entity: str = 'ins
         pd.DataFrame: head(1000) sample
     """
     session = requests.Session()
-    base_url = f"https://api.openalex.org/{entity}?filter={filter_field}:{{}}&cursor={{}}&per-page=200"
-    cursor = '*'
+    base_url = f"https://api.openalex.org/{entity}"
+    query_options = query_options or {}
+    per_page = query_options.get("per_page", 200)
+    extra_filters = query_options.get("extra_filters", {})
+    filter_string, effective_filters = _build_openalex_filter_string(
+        filter_field=filter_field,
+        institution_ror=institution_ror,
+        extra_filters=extra_filters,
+    )
+    cursor = "*"
     iteration_limit = 1
     iteration_count = 0
     all_dataframes = []
 
     while True:
-        url = base_url.format(institution_ror, cursor)
+        request_params = {
+            "filter": filter_string,
+            "cursor": cursor,
+            "per-page": per_page,
+        }
         print(f'Iteration count: {iteration_count}')
-        print(f'GET {url}')
+        print(f"GET {base_url} params={request_params}")
 
         try:
-            response = session.get(url, timeout=10)
+            response = session.get(base_url, params=request_params, timeout=10)
             response.raise_for_status()
             api_response = response.json()
         except requests.RequestException as e:
@@ -59,6 +140,16 @@ def openalex_extract(institution_ror: str, filter_field: str, entity: str = 'ins
         df_tmp = pd.DataFrame.from_dict(api_response['results'])
         if cleaner:
             df_tmp = cleaner(df_tmp)
+        df_tmp = _add_openalex_extract_metadata(
+            df_tmp,
+            institution_ror=institution_ror,
+            filter_field=filter_field,
+            entity=entity,
+            effective_filters={
+                **effective_filters,
+                "per_page": per_page,
+            },
+        )
         all_dataframes.append(df_tmp)
 
         # update cursor
@@ -73,8 +164,16 @@ def openalex_extract(institution_ror: str, filter_field: str, entity: str = 'ins
         time.sleep(1)
 
     df = pd.concat(all_dataframes, ignore_index=True) if all_dataframes else pd.DataFrame()
-    df["_filter_param"] = filter_field
-    df["_filter_value"] = institution_ror
-    df["_extract_datetime"] = date.today()
+    if df.empty:
+        df = _add_openalex_extract_metadata(
+            df,
+            institution_ror=institution_ror,
+            filter_field=filter_field,
+            entity=entity,
+            effective_filters={
+                **effective_filters,
+                "per_page": per_page,
+            },
+        )
 
     return df, df.head(1000)
