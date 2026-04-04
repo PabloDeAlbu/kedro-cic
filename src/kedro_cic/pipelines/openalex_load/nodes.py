@@ -1,3 +1,5 @@
+from collections.abc import Iterable, Iterator
+
 import pandas as pd
 from pandas import json_normalize
 
@@ -14,6 +16,16 @@ _CORE_EXTRACTED_META_COLS = [
 ]
 _LEGACY_EXTRACTED_META_COLS = ["_filter_param", "_filter_value", "_extract_datetime"]
 _EXTRACTED_META_COLS = [*_CORE_EXTRACTED_META_COLS, *_LEGACY_EXTRACTED_META_COLS]
+
+
+class _BatchFrameIterable(Iterable[pd.DataFrame]):
+    """Wrap chunked frames so Kedro does not treat the node as a generator node."""
+
+    def __init__(self, frames: Iterator[pd.DataFrame]) -> None:
+        self._frames = frames
+
+    def __iter__(self) -> Iterator[pd.DataFrame]:
+        return self._frames
 
 
 def _select_with_metadata(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
@@ -272,7 +284,9 @@ def openalex_load_work(df_work_raw):
     if isinstance(df_work_raw, pd.DataFrame):
         return _openalex_load_work_batch(df_work_raw)
 
-    return (_openalex_load_work_batch(batch) for batch in df_work_raw)
+    return _BatchFrameIterable(
+        _openalex_load_work_batch(batch) for batch in df_work_raw
+    )
 
 def openalex_load_work_authorships(df_work_raw):
 
