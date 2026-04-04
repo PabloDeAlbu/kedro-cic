@@ -47,6 +47,7 @@ def test_save_truncates_then_appends_without_replace(monkeypatch):
     fake_engine = _RecordingEngine()
     type(dataset).engines[dataset._connection_str] = fake_engine
     monkeypatch.setattr(dataset, "_exists", lambda: True)
+    monkeypatch.setattr(dataset, "_get_existing_column_names", lambda: ["id"])
 
     captured: dict[str, object] = {}
 
@@ -103,6 +104,39 @@ def test_save_appends_without_truncate_when_table_does_not_exist(monkeypatch):
             },
         }
     ]
+
+
+def test_save_filters_out_columns_missing_from_existing_table(monkeypatch):
+    dataset = TruncateAppendSQLTableDataset(
+        table_name="author",
+        credentials={"con": "postgresql://unit-test-filter-columns"},
+        save_args={"schema": "ldg_openalex"},
+    )
+    fake_engine = _RecordingEngine()
+    type(dataset).engines[dataset._connection_str] = fake_engine
+    monkeypatch.setattr(dataset, "_exists", lambda: True)
+    monkeypatch.setattr(dataset, "_get_existing_column_names", lambda: ["id", "_load_datetime"])
+
+    captured: dict[str, object] = {}
+
+    def fake_to_sql(self, *, con, **kwargs):
+        captured["columns"] = list(self.columns)
+        captured["con"] = con
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(pd.DataFrame, "to_sql", fake_to_sql)
+
+    dataset.save(
+        pd.DataFrame(
+            {
+                "id": ["https://openalex.org/A1"],
+                "source_system": ["openalex"],
+                "_load_datetime": [pd.Timestamp("2026-04-03 00:00:00")],
+            }
+        )
+    )
+
+    assert captured["columns"] == ["id", "_load_datetime"]
 
 
 def test_catalog_uses_custom_dataset_for_landing_tables():

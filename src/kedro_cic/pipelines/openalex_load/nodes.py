@@ -356,21 +356,20 @@ def openalex_load_work_location(df_work_raw):
 
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
-    df_work_raw.rename(columns={'id': 'work_id'}, inplace=True)
     df_work_location = df_work_raw.explode('locations').reset_index(drop=True)
 
+    df_locations = json_normalize(df_work_location['locations'])
+    df_locations.rename(columns={'id': 'location_id'}, inplace=True)
+
     df_work_location = pd.concat(
-        [
-            df_work_location.loc[:, ['work_id', *_EXTRACTED_META_COLS]],
-            json_normalize(df_work_location['locations']),
-        ],
+        [df_work_location.loc[:, ['id', *_EXTRACTED_META_COLS]], df_locations],
         axis=1,
     )
 
     df_work_location.columns = df_work_location.columns.str.replace('.', '_')
 
     df_work_location = df_work_location[[
-        'work_id','id', 
+        'id',
         'source_id', 'source_display_name', 'source_is_core', 'source_type',
         'source_host_organization', 'source_host_organization_name',
         'is_accepted', 'is_oa', 'is_published', 'landing_page_url',

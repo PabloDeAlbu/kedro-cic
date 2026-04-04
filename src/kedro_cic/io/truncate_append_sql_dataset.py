@@ -62,12 +62,26 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
         cascade_clause = " CASCADE" if self._truncate_cascade else ""
         return f"TRUNCATE TABLE {qualified_name}{cascade_clause}"
 
+    def _get_existing_column_names(self) -> list[str]:
+        table = Table(
+            self._load_args["table_name"],
+            MetaData(),
+            schema=self._get_schema(),
+            autoload_with=self.engine,
+        )
+        return [column.name for column in table.columns]
+
     def save(self, data: pd.DataFrame) -> None:
         save_args = copy.deepcopy(self._save_args)
         save_args["if_exists"] = "append"
 
         with self.engine.begin() as connection:
-            if self._truncate and self._exists():
+            table_exists = self._exists()
+            if self._truncate and table_exists:
                 connection.execute(text(self._get_truncate_statement()))
+
+            if table_exists:
+                existing_columns = set(self._get_existing_column_names())
+                data = data.loc[:, [col for col in data.columns if col in existing_columns]]
 
             data.to_sql(con=connection, **save_args)

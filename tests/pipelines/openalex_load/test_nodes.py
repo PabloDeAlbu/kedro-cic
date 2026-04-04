@@ -180,3 +180,44 @@ def test_openalex_load_work_drops_residual_primary_location_source_column():
     )
     assert pd.notna(result.loc[0, "extract_datetime"])
     assert pd.notna(result.loc[0, "_load_datetime"])
+
+
+def test_openalex_load_work_location_keeps_work_id_in_id_column():
+    nodes = _load_nodes_module()
+    df = pd.DataFrame(
+        [
+            {
+                "id": "https://openalex.org/W1",
+                "locations": [
+                    {
+                        "id": "https://openalex.org/L1",
+                        "source": {
+                            "id": "https://openalex.org/S1",
+                            "display_name": "Example Journal",
+                            "is_core": True,
+                            "type": "journal",
+                            "host_organization": "https://openalex.org/I1",
+                            "host_organization_name": "Example Publisher",
+                            "is_in_doaj": False,
+                            "is_oa": False,
+                            "issn_l": "1234-5678",
+                        },
+                        "is_accepted": True,
+                        "is_oa": False,
+                        "is_published": True,
+                        "landing_page_url": "https://example.org/work",
+                        "license": "cc-by",
+                        "license_id": "https://openalex.org/licenses/cc-by",
+                        "pdf_url": "https://example.org/work.pdf",
+                        "version": "publishedVersion",
+                    }
+                ],
+            }
+        ]
+    )
+
+    result = nodes.openalex_load_work_location(df)
+
+    assert result.loc[0, "id"] == "https://openalex.org/W1"
+    assert "work_id" not in result.columns
+    assert result.loc[0, "source_id"] == "https://openalex.org/S1"
