@@ -39,6 +39,125 @@
     kedro-viz:
       layer: raw
 
+"raw/openalex/work#batched_parquet":
+  type: kedro_cic.io.parquet_batch_dataset.ParquetBatchDataset
+  filepath: "data/01_raw/openalex/work.parquet"
+  batch_size: 500
+  load_args:
+    columns:
+      - id
+      - title
+      - display_name
+      - publication_year
+      - publication_date
+      - ids
+      - language
+      - primary_location
+      - type
+      - type_crossref
+      - open_access
+      - countries_distinct_count
+      - institutions_distinct_count
+      - apc_list
+      - apc_paid
+      - fwci
+      - has_fulltext
+      - fulltext_origin
+      - cited_by_count
+      - citation_normalized_percentile
+      - cited_by_percentile_year
+      - biblio
+      - is_retracted
+      - is_paratext
+      - primary_topic
+      - locations_count
+      - best_oa_location
+      - referenced_works_count
+      - cited_by_api_url
+      - updated_date
+      - created_date
+      - source_system
+      - entity_type
+      - extract_datetime
+      - extract_date
+      - institution_ror
+      - extract_filters
+      - extract_filter_label
+      - endpoint
+      - api_path
+      - _filter_param
+      - _filter_value
+      - _extract_datetime
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/openalex/work#parquet_authorships":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/openalex/work.parquet"
+  load_args:
+    columns:
+      - id
+      - authorships
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/openalex/work#parquet_concepts":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/openalex/work.parquet"
+  load_args:
+    columns:
+      - id
+      - concepts
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/openalex/work#parquet_corresponding_author_ids":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/openalex/work.parquet"
+  load_args:
+    columns:
+      - id
+      - corresponding_author_ids
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/openalex/work#parquet_referenced_works":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/openalex/work.parquet"
+  load_args:
+    columns:
+      - id
+      - referenced_works
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/openalex/work#parquet_topics":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/openalex/work.parquet"
+  load_args:
+    columns:
+      - id
+      - topics
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/openalex/work#parquet_locations":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/openalex/work.parquet"
+  load_args:
+    columns:
+      - id
+      - locations
+  metadata:
+    kedro-viz:
+      layer: raw
+
 "raw/{source}/{entity}_dev#parquet":
   type: pandas.ParquetDataset
   filepath: "data/01_raw/{source}/{entity}_dev.parquet"
