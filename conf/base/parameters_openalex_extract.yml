@@ -18,20 +18,20 @@ openalex_extract_options:
         per_page: 200
         extra_filters: {}
 #    institution_ror: 'https://ror.org/02s7sax82' # cic ror
-    institution_ror: 'https://ror.org/03cqe8w59' # conicet ror
-#    institution_ror: 'https://ror.org/01tjs6929' # unlp ror
+#    institution_ror: 'https://ror.org/03cqe8w59' # conicet ror
+    institution_ror: 'https://ror.org/01tjs6929' # unlp ror
 
     work_endpoint: works
     work_filter: 'institutions.ror'
     work_query_options:
         per_page: 200
         extra_filters:
-            publication_year: 2024
+            #publication_year: 2024
         # Ejemplos:
         # extra_filters:
         #     publication_year: 2024
-        #     from_publication_date: '2024-01-01'
-        #     to_publication_date: '2024-12-31'
+            from_publication_date: '2024-01-01'
+            to_publication_date: '2024-06-01'
         #     type: article
         #     is_oa: true
 

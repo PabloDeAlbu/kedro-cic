@@ -138,38 +138,6 @@ def test_save_filters_out_columns_missing_from_existing_table(monkeypatch):
 
     assert captured["columns"] == ["id", "_load_datetime"]
 
-
-def test_save_accepts_iterable_of_dataframes(monkeypatch):
-    dataset = TruncateAppendSQLTableDataset(
-        table_name="author",
-        credentials={"con": "postgresql://unit-test-iterable"},
-        save_args={"schema": "ldg_openalex"},
-    )
-    fake_engine = _RecordingEngine()
-    type(dataset).engines[dataset._connection_str] = fake_engine
-    monkeypatch.setattr(dataset, "_exists", lambda: True)
-    monkeypatch.setattr(dataset, "_get_existing_column_names", lambda: ["id"])
-
-    calls: list[list[str]] = []
-
-    def fake_to_sql(self, *, con, **kwargs):
-        calls.append(list(self.columns))
-
-    monkeypatch.setattr(pd.DataFrame, "to_sql", fake_to_sql)
-
-    dataset.save(
-        iter(
-            [
-                pd.DataFrame({"id": [1], "source_system": ["openalex"]}),
-                pd.DataFrame({"id": [2], "source_system": ["openalex"]}),
-            ]
-        )
-    )
-
-    assert fake_engine.connection.statements == ["TRUNCATE TABLE ldg_openalex.author"]
-    assert calls == [["id"], ["id"]]
-
-
 def test_catalog_uses_custom_dataset_for_landing_tables():
     config_loader = OmegaConfigLoader(
         conf_source=str(Path.cwd() / "conf"),

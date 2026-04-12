@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Iterable
 from typing import Any
 
 import pandas as pd
@@ -72,16 +71,7 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
         )
         return [column.name for column in table.columns]
 
-    def _filter_existing_columns(
-        self,
-        data: pd.DataFrame,
-        existing_columns: set[str] | None,
-    ) -> pd.DataFrame:
-        if existing_columns is None:
-            return data
-        return data.loc[:, [col for col in data.columns if col in existing_columns]]
-
-    def save(self, data: pd.DataFrame | Iterable[pd.DataFrame]) -> None:
+    def save(self, data: pd.DataFrame) -> None:
         save_args = copy.deepcopy(self._save_args)
         save_args["if_exists"] = "append"
 
@@ -90,25 +80,8 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
             if self._truncate and table_exists:
                 connection.execute(text(self._get_truncate_statement()))
 
-            existing_columns = None
             if table_exists:
                 existing_columns = set(self._get_existing_column_names())
+                data = data.loc[:, [col for col in data.columns if col in existing_columns]]
 
-            if isinstance(data, pd.DataFrame):
-                self._filter_existing_columns(data, existing_columns).to_sql(
-                    con=connection,
-                    **save_args,
-                )
-                return
-
-            if isinstance(data, Iterable):
-                for chunk in data:
-                    if chunk is None or chunk.empty:
-                        continue
-                    self._filter_existing_columns(chunk, existing_columns).to_sql(
-                        con=connection,
-                        **save_args,
-                    )
-                return
-
-            raise DatasetError("TruncateAppendSQLTableDataset only supports DataFrame or iterable chunks.")
+            data.to_sql(con=connection, **save_args)

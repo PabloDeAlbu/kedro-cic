@@ -1,5 +1,3 @@
-from collections.abc import Iterable, Iterator
-
 import pandas as pd
 from pandas import json_normalize
 
@@ -16,17 +14,6 @@ _CORE_EXTRACTED_META_COLS = [
 ]
 _LEGACY_EXTRACTED_META_COLS = ["_filter_param", "_filter_value", "_extract_datetime"]
 _EXTRACTED_META_COLS = [*_CORE_EXTRACTED_META_COLS, *_LEGACY_EXTRACTED_META_COLS]
-
-
-class _BatchFrameIterable(Iterable[pd.DataFrame]):
-    """Wrap chunked frames so Kedro does not treat the node as a generator node."""
-
-    def __init__(self, frames: Iterator[pd.DataFrame]) -> None:
-        self._frames = frames
-
-    def __iter__(self) -> Iterator[pd.DataFrame]:
-        return self._frames
-
 
 def _select_with_metadata(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     df = _add_openalex_extracted_metadata(df)
@@ -65,8 +52,8 @@ def _add_openalex_loaded_metadata(df: pd.DataFrame, load_datetime=None) -> pd.Da
     return df
 
 
-def _openalex_load_work_batch(df_work_raw: pd.DataFrame) -> pd.DataFrame:
-    """Transforma un batch de works sin materializar el parquet completo."""
+def openalex_load_work(df_work_raw):
+    """Limpia y transforma los datos de OpenAlex para su almacenamiento en una base de datos relacional."""
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
     expected_columns = [
@@ -129,12 +116,18 @@ def _openalex_load_work_batch(df_work_raw: pd.DataFrame) -> pd.DataFrame:
 
     df_work = df_work_raw.reindex(columns=expected_columns).reset_index(drop=True).copy()
 
+    # Agregar columnas faltantes con NaN
+    for col in expected_columns:
+        if col not in df_work.columns:
+            df_work[col] = pd.NA
+
     # ids
-    df_ids = pd.json_normalize(df_work.pop('ids')).reset_index(drop=True)
+    df_ids = pd.json_normalize(df_work['ids']).reset_index(drop=True)
     df_work = pd.concat([df_work, df_ids], axis=1)
+    df_work.drop(columns=['ids'], inplace=True)    
 
     # primary_location
-    df_primary_location = pd.json_normalize(df_work.pop('primary_location')).reset_index(drop=True)
+    df_primary_location = pd.json_normalize(df_work['primary_location']).reset_index(drop=True)
     df_primary_location.rename(columns=lambda col: f'primary_location.{col}', inplace=True)
     df_primary_location.drop(columns=[
         'primary_location.source',
@@ -146,43 +139,51 @@ def _openalex_load_work_batch(df_work_raw: pd.DataFrame) -> pd.DataFrame:
         errors='ignore')
 
     df_work = pd.concat([df_work, df_primary_location], axis=1)
+    df_work.drop(columns=['primary_location'], inplace=True)    
 
     # openacess
-    df_openaccess_expanded = pd.json_normalize(df_work.pop('open_access'))
+    df_openaccess_expanded = pd.json_normalize(df_work['open_access'])
     df_work = pd.concat([df_work, df_openaccess_expanded], axis=1)
+    df_work.drop(columns=['open_access'], inplace=True)    
 
     # apc_list
-    df_apc_list = pd.json_normalize(df_work.pop('apc_list'))
+    df_apc_list = pd.json_normalize(df_work['apc_list'])
     df_apc_list.rename(columns=lambda col: f'apc_list.{col}', inplace=True)
     df_work = pd.concat([df_work, df_apc_list], axis=1)
+    df_work.drop(columns=['apc_list'], inplace=True)    
  
     # apc_paid
-    df_apc_paid = pd.json_normalize(df_work.pop('apc_paid'))
+    df_apc_paid = pd.json_normalize(df_work['apc_paid'])
     df_apc_paid.rename(columns=lambda col: f'apc_paid.{col}', inplace=True)
     df_work = pd.concat([df_work, df_apc_paid], axis=1)
+    df_work.drop(columns=['apc_paid'], inplace=True)    
  
     # citation_normalized_percentile
-    df_citation_normalized_percentile = pd.json_normalize(df_work.pop('citation_normalized_percentile'))
+    df_citation_normalized_percentile = pd.json_normalize(df_work['citation_normalized_percentile'])
     df_citation_normalized_percentile.rename(columns=lambda col: f'citation_normalized_percentile.{col}', inplace=True)
     df_work = pd.concat([df_work, df_citation_normalized_percentile], axis=1)
+    df_work.drop(columns=['citation_normalized_percentile'], inplace=True)    
 
     # cited_by_percentile_year
-    df_cited_by_percentile_year = pd.json_normalize(df_work.pop('cited_by_percentile_year'))
+    df_cited_by_percentile_year = pd.json_normalize(df_work['cited_by_percentile_year'])
     df_cited_by_percentile_year.rename(columns=lambda col: f'cited_by_percentile_year.{col}', inplace=True)
     df_work = pd.concat([df_work, df_cited_by_percentile_year], axis=1)
+    df_work.drop(columns=['cited_by_percentile_year'], inplace=True)    
 
     # biblio
-    df_biblio = pd.json_normalize(df_work.pop('biblio'))
+    df_biblio = pd.json_normalize(df_work['biblio'])
     df_biblio.rename(columns=lambda col: f'biblio.{col}', inplace=True)
     df_work = pd.concat([df_work, df_biblio], axis=1)
+    df_work.drop(columns=['biblio'], inplace=True)
 
     # primary_topic
-    df_primary_topic = pd.json_normalize(df_work.pop('primary_topic'))
+    df_primary_topic = pd.json_normalize(df_work['primary_topic'])
     df_primary_topic.rename(columns=lambda col: f'primary_topic.{col}', inplace=True)
     df_work = pd.concat([df_work, df_primary_topic], axis=1)
+    df_work.drop(columns=['primary_topic'], inplace=True)    
 
     # best_oa_location
-    df_best_oa_location = pd.json_normalize(df_work.pop('best_oa_location'))
+    df_best_oa_location = pd.json_normalize(df_work['best_oa_location'])
     df_best_oa_location.rename(columns=lambda col: f'best_oa_location.{col}', inplace=True)
     df_best_oa_location.drop(columns=[
         'best_oa_location.source.host_organization_lineage',
@@ -191,6 +192,7 @@ def _openalex_load_work_batch(df_work_raw: pd.DataFrame) -> pd.DataFrame:
     ], inplace=True, errors='ignore')
     
     df_work = pd.concat([df_work, df_best_oa_location], axis=1)
+    df_work.drop(columns=['best_oa_location'], inplace=True)    
 
     df_work = _add_openalex_loaded_metadata(df_work)
 
@@ -198,7 +200,6 @@ def _openalex_load_work_batch(df_work_raw: pd.DataFrame) -> pd.DataFrame:
     df_work = df_work.convert_dtypes()
 
     return df_work
-
 
 def openalex_load_author(df: pd.DataFrame)-> pd.DataFrame:
     
@@ -278,15 +279,6 @@ def openalex_load_author_topic(df: pd.DataFrame)-> pd.DataFrame:
     df_author2topic = _add_openalex_loaded_metadata(df_author2topic)
 
     return df_author2topic
-
-def openalex_load_work(df_work_raw):
-    """Limpia y transforma los datos de OpenAlex para su almacenamiento en una base de datos relacional."""
-    if isinstance(df_work_raw, pd.DataFrame):
-        return _openalex_load_work_batch(df_work_raw)
-
-    return _BatchFrameIterable(
-        _openalex_load_work_batch(batch) for batch in df_work_raw
-    )
 
 def openalex_load_work_authorships(df_work_raw):
 
