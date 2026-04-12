@@ -51,8 +51,12 @@ def _add_openalex_loaded_metadata(df: pd.DataFrame, load_datetime=None) -> pd.Da
     df["_load_datetime"] = load_datetime
     return df
 
+def openalex_stage_work(df_work_raw: pd.DataFrame) -> pd.DataFrame:
+    """Mantiene work en memoria para reutilizarlo aguas abajo sin releer parquet."""
+    return df_work_raw
 
-def openalex_load_work(df_work_raw):
+
+def openalex_load_work(df_work_raw, load_datetime=None):
     """Limpia y transforma los datos de OpenAlex para su almacenamiento en una base de datos relacional."""
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
@@ -194,7 +198,7 @@ def openalex_load_work(df_work_raw):
     df_work = pd.concat([df_work, df_best_oa_location], axis=1)
     df_work.drop(columns=['best_oa_location'], inplace=True)    
 
-    df_work = _add_openalex_loaded_metadata(df_work)
+    df_work = _add_openalex_loaded_metadata(df_work, load_datetime=load_datetime)
 
     # Convertir tipos de datos automáticamente
     df_work = df_work.convert_dtypes()
@@ -280,7 +284,7 @@ def openalex_load_author_topic(df: pd.DataFrame)-> pd.DataFrame:
 
     return df_author2topic
 
-def openalex_load_work_authorships(df_work_raw):
+def openalex_load_work_authorships(df_work_raw, load_datetime=None):
 
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
@@ -314,13 +318,13 @@ def openalex_load_work_authorships(df_work_raw):
     # Combinar work_id con la información normalizada de instituciones
     df_work2institution = df_work2institution_exploded[['work_id', *_EXTRACTED_META_COLS]].join(df_institution_norm)
     
-    df_work2author = _add_openalex_loaded_metadata(df_work2author)
-    df_work2institution = _add_openalex_loaded_metadata(df_work2institution)
-    df_author2institution = _add_openalex_loaded_metadata(df_author2institution)
+    df_work2author = _add_openalex_loaded_metadata(df_work2author, load_datetime=load_datetime)
+    df_work2institution = _add_openalex_loaded_metadata(df_work2institution, load_datetime=load_datetime)
+    df_author2institution = _add_openalex_loaded_metadata(df_author2institution, load_datetime=load_datetime)
 
     return df_work2author, df_work2institution, df_author2institution
 
-def openalex_load_work_concept(df_work_raw):
+def openalex_load_work_concept(df_work_raw, load_datetime=None):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
     df_work = _select_with_metadata(df_work_raw, ['id', 'concepts'])
@@ -335,11 +339,11 @@ def openalex_load_work_concept(df_work_raw):
         axis=1,
     )
     
-    df_work2concepts = _add_openalex_loaded_metadata(df_work2concepts)
+    df_work2concepts = _add_openalex_loaded_metadata(df_work2concepts, load_datetime=load_datetime)
 
     return df_work2concepts
 
-def openalex_load_work_corresponding_author_ids(df_work_raw):
+def openalex_load_work_corresponding_author_ids(df_work_raw, load_datetime=None):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
     df_work = _select_with_metadata(df_work_raw, ['id', 'corresponding_author_ids'])
@@ -347,11 +351,14 @@ def openalex_load_work_corresponding_author_ids(df_work_raw):
 
     df_work2corresponding_author_ids = df_work.explode('corresponding_author_ids')
 
-    df_work2corresponding_author_ids = _add_openalex_loaded_metadata(df_work2corresponding_author_ids)
+    df_work2corresponding_author_ids = _add_openalex_loaded_metadata(
+        df_work2corresponding_author_ids,
+        load_datetime=load_datetime,
+    )
 
     return df_work2corresponding_author_ids
 
-def openalex_load_work_location(df_work_raw):
+def openalex_load_work_location(df_work_raw, load_datetime=None):
 
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
@@ -378,11 +385,11 @@ def openalex_load_work_location(df_work_raw):
         *_EXTRACTED_META_COLS,
     ]]
 
-    df_work_location = _add_openalex_loaded_metadata(df_work_location)
+    df_work_location = _add_openalex_loaded_metadata(df_work_location, load_datetime=load_datetime)
 
     return df_work_location
 
-def openalex_load_work_referenced_works(df_work_raw):
+def openalex_load_work_referenced_works(df_work_raw, load_datetime=None):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
     df_work = _select_with_metadata(df_work_raw, ['id', 'referenced_works'])
@@ -390,12 +397,15 @@ def openalex_load_work_referenced_works(df_work_raw):
     df_work2referenced_works_exploded =  df_work.explode('referenced_works')
     df_work2referenced_works = df_work2referenced_works_exploded.reset_index(drop=True)
 
-    df_work2referenced_works = _add_openalex_loaded_metadata(df_work2referenced_works)
+    df_work2referenced_works = _add_openalex_loaded_metadata(
+        df_work2referenced_works,
+        load_datetime=load_datetime,
+    )
 
     return df_work2referenced_works
 
 
-def openalex_load_work_topics(df_work_raw):
+def openalex_load_work_topics(df_work_raw, load_datetime=None):
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
     df_work = _select_with_metadata(df_work_raw, ['id', 'topics'])
@@ -413,9 +423,10 @@ def openalex_load_work_topics(df_work_raw):
         axis=1,
     )
 
-    df_work2topics = _add_openalex_loaded_metadata(df_work2topics)
+    df_work2topics = _add_openalex_loaded_metadata(df_work2topics, load_datetime=load_datetime)
 
     return df_work2topics
+
 
 def openalex_load_institution(df_institution_raw):
 

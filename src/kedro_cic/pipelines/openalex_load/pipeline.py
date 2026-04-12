@@ -3,6 +3,7 @@ from .nodes import (
     openalex_load_author,
     openalex_load_author_institution_year,
     openalex_load_author_topic,
+    openalex_stage_work,
     openalex_load_work,
     openalex_load_work_authorships,
     openalex_load_work_concept,
@@ -34,45 +35,51 @@ def create_pipeline(**kwargs) -> Pipeline:
             outputs='ldg/openalex/map_author_topic'
             ),
         node(
+            name="openalex_stage_work",
+            func=openalex_stage_work,
+            inputs='raw/openalex/work#parquet',
+            outputs='memory/openalex/work'
+            ),
+        node(
             name="openalex_load_work",
             func=openalex_load_work,
-            inputs='raw/openalex/work#parquet',
+            inputs='memory/openalex/work',
             outputs='ldg/openalex/work'
             ),
         node(
             name="openalex_load_work_authorships",
             func=openalex_load_work_authorships,
-            inputs='raw/openalex/work#parquet',
+            inputs='memory/openalex/work',
             outputs=['ldg/openalex/map_work_author', 'ldg/openalex/map_work_institution', 'ldg/openalex/map_author_institution']
             ),
         node(
             name="openalex_load_work_concept",
             func=openalex_load_work_concept,
-            inputs='raw/openalex/work#parquet',
+            inputs='memory/openalex/work',
             outputs='ldg/openalex/map_work_concept'
             ),
         node(
             name="openalex_load_work_corresponding_author_ids",
             func=openalex_load_work_corresponding_author_ids,
-            inputs='raw/openalex/work#parquet',
+            inputs='memory/openalex/work',
             outputs='ldg/openalex/map_work_corresponding_author_id'
             ),
         node(
             name="openalex_load_work_referenced_works",
             func=openalex_load_work_referenced_works,
-            inputs='raw/openalex/work#parquet',
+            inputs='memory/openalex/work',
             outputs='ldg/openalex/map_work_referenced_work'
             ),
         node(
             name="openalex_load_work_topics",
             func=openalex_load_work_topics,
-            inputs='raw/openalex/work#parquet',
+            inputs='memory/openalex/work',
             outputs='ldg/openalex/map_work_topic'
             ),
         node(
             name="openalex_load_work_location",
             func=openalex_load_work_location,
-            inputs='raw/openalex/work#parquet',
+            inputs='memory/openalex/work',
             outputs='ldg/openalex/map_work_location'
             ),
         node(

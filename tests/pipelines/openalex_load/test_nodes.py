@@ -181,6 +181,23 @@ def test_openalex_load_work_drops_residual_primary_location_source_column():
     assert pd.notna(result.loc[0, "extract_datetime"])
     assert pd.notna(result.loc[0, "_load_datetime"])
 
+
+def test_openalex_stage_work_returns_same_dataframe():
+    nodes = _load_nodes_module()
+    df = pd.DataFrame(
+        [
+            {
+                "id": "https://openalex.org/W1",
+                "title": "Test work",
+            }
+        ]
+    )
+
+    result = nodes.openalex_stage_work(df)
+
+    assert result is df
+
+
 def test_openalex_load_work_location_keeps_work_id_in_id_column():
     nodes = _load_nodes_module()
     df = pd.DataFrame(

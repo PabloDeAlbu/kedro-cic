@@ -46,6 +46,9 @@
     kedro-viz:
       layer: raw
 
+"memory/openalex/work":
+  type: MemoryDataset
+
 "intermediate/{source}/{entity}":
   type: pandas.CSVDataset
   filepath: "data/02_intermediate/{source}/{entity}.csv"
