@@ -36,7 +36,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         node(
             name="openalex_load_work",
             func=openalex_load_work,
-            inputs='raw/openalex/work#batched_parquet',
+            inputs='raw/openalex/work#parquet',
             outputs='ldg/openalex/work'
             ),
         node(
