@@ -284,12 +284,12 @@ def openalex_load_author_topic(df: pd.DataFrame)-> pd.DataFrame:
 
     return df_author2topic
 
-def openalex_load_work_authorships(df_work_raw, load_datetime=None):
+def openalex_load_work_authorships(df_work_raw):
 
     df_work_raw = _add_openalex_extracted_metadata(df_work_raw)
 
     # Seleccionar las columnas necesarias y convertir los tipos de datos
-    df_work2authorships = _select_with_metadata(df_work_raw, ['id', 'authorships']).convert_dtypes()
+    df_work2authorships = df_work_raw[['id', 'authorships', '_filter_param', '_filter_value', '_extract_datetime']].convert_dtypes()
     df_work2authorships.rename(columns={"id": "work_id"}, inplace=True)
 
     # Expandir la lista de authorships
@@ -297,13 +297,38 @@ def openalex_load_work_authorships(df_work_raw, load_datetime=None):
 
     # Normalizar la información de authorships
     df_authorships_norm = pd.json_normalize(df_work2authorships_exploded['authorships'])
-    df_authorships_norm.rename(columns={"author.id": "author_id"}, inplace=True)
-    
+    df_authorships_norm.rename(
+        columns={
+            "author.id": "author_id",
+            "author.display_name": "author_display_name",
+            "author.orcid": "author_orcid",
+        },
+        inplace=True,
+    )
+
     # Combinar work_id con la información normalizada de authorships
-    df_work2authorships = df_work2authorships_exploded[['work_id', *_EXTRACTED_META_COLS]].join(df_authorships_norm)
+    df_work2authorships = df_work2authorships_exploded[
+        ['work_id', '_filter_param', '_filter_value', '_extract_datetime']
+    ].join(df_authorships_norm)
+
+    # Asegurar presencia de columnas aunque no vengan en todos los payloads
+    for col in ["author_id", "author_display_name", "author_orcid", "author_position", "institutions"]:
+        if col not in df_work2authorships.columns:
+            df_work2authorships[col] = pd.NA
 
     # Extraer la relación work-author
-    df_work2author = df_work2authorships[['work_id', 'author_id', 'author_position', *_EXTRACTED_META_COLS]]
+    df_work2author = df_work2authorships[
+        [
+            'work_id',
+            'author_id',
+            'author_display_name',
+            'author_orcid',
+            'author_position',
+            '_filter_param',
+            '_filter_value',
+            '_extract_datetime',
+        ]
+    ]
 
     # Expandir la lista de instituciones asociadas a cada autor
     df_work2institution_exploded = df_work2authorships.explode('institutions', ignore_index=True)
@@ -313,14 +338,18 @@ def openalex_load_work_authorships(df_work_raw, load_datetime=None):
     df_institution_norm.drop(columns=['lineage'], errors='ignore', inplace=True)
 
     # Combinar author_id con la información normalizada de instituciones
-    df_author2institution = df_work2institution_exploded[['author_id', *_EXTRACTED_META_COLS]].join(df_institution_norm)
+    df_author2institution = df_work2institution_exploded[
+        ['author_id', '_filter_param', '_filter_value', '_extract_datetime']
+    ].join(df_institution_norm)
 
     # Combinar work_id con la información normalizada de instituciones
-    df_work2institution = df_work2institution_exploded[['work_id', *_EXTRACTED_META_COLS]].join(df_institution_norm)
-    
-    df_work2author = _add_openalex_loaded_metadata(df_work2author, load_datetime=load_datetime)
-    df_work2institution = _add_openalex_loaded_metadata(df_work2institution, load_datetime=load_datetime)
-    df_author2institution = _add_openalex_loaded_metadata(df_author2institution, load_datetime=load_datetime)
+    df_work2institution = df_work2institution_exploded[
+        ['work_id', '_filter_param', '_filter_value', '_extract_datetime']
+    ].join(df_institution_norm)
+
+    df_work2author = _add_openalex_loaded_metadata(df_work2author)
+    df_work2institution = _add_openalex_loaded_metadata(df_work2institution)
+    df_author2institution = _add_openalex_loaded_metadata(df_author2institution)
 
     return df_work2author, df_work2institution, df_author2institution
 
