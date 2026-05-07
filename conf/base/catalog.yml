@@ -46,6 +46,13 @@
     kedro-viz:
       layer: raw
 
+"raw/google-scholar/files":
+  type: partitions.PartitionedDataset
+  path: data/01_raw/google-scholar
+  filename_suffix: ".html"
+  dataset:
+    type: text.TextDataset
+
 "memory/openalex/work":
   type: MemoryDataset
 
