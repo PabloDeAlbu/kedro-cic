@@ -23,6 +23,7 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
         save_args: dict[str, Any] | None = None,
         truncate: bool = True,
         truncate_cascade: bool = False,
+        recreate_on_added_columns: bool = True,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
@@ -34,6 +35,7 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
         )
         self._truncate = truncate
         self._truncate_cascade = truncate_cascade
+        self._recreate_on_added_columns = recreate_on_added_columns
 
         if self._save_args.get("if_exists") not in {None, "append"}:
             raise DatasetError(
@@ -47,6 +49,7 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
         description = super()._describe()
         description["truncate"] = self._truncate
         description["truncate_cascade"] = self._truncate_cascade
+        description["recreate_on_added_columns"] = self._recreate_on_added_columns
         return description
 
     def _get_schema(self) -> str | None:
@@ -61,6 +64,16 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
         qualified_name = self.engine.dialect.identifier_preparer.format_table(table)
         cascade_clause = " CASCADE" if self._truncate_cascade else ""
         return f"TRUNCATE TABLE {qualified_name}{cascade_clause}"
+
+    def _get_drop_statement(self) -> str:
+        table = Table(
+            self._load_args["table_name"],
+            MetaData(),
+            schema=self._get_schema(),
+        )
+        qualified_name = self.engine.dialect.identifier_preparer.format_table(table)
+        cascade_clause = " CASCADE" if self._truncate_cascade else ""
+        return f"DROP TABLE {qualified_name}{cascade_clause}"
 
     def _get_existing_column_names(self) -> list[str]:
         table = Table(
@@ -77,11 +90,16 @@ class TruncateAppendSQLTableDataset(SQLTableDataset):
 
         with self.engine.begin() as connection:
             table_exists = self._exists()
-            if self._truncate and table_exists:
-                connection.execute(text(self._get_truncate_statement()))
-
             if table_exists:
                 existing_columns = set(self._get_existing_column_names())
-                data = data.loc[:, [col for col in data.columns if col in existing_columns]]
+                added_columns = [col for col in data.columns if col not in existing_columns]
+
+                if added_columns and self._recreate_on_added_columns:
+                    connection.execute(text(self._get_drop_statement()))
+                    table_exists = False
+                else:
+                    if self._truncate:
+                        connection.execute(text(self._get_truncate_statement()))
+                    data = data.loc[:, [col for col in data.columns if col in existing_columns]]
 
             data.to_sql(con=connection, **save_args)

@@ -111,6 +111,7 @@ def test_save_filters_out_columns_missing_from_existing_table(monkeypatch):
         table_name="author",
         credentials={"con": "postgresql://unit-test-filter-columns"},
         save_args={"schema": "ldg_openalex"},
+        recreate_on_added_columns=False,
     )
     fake_engine = _RecordingEngine()
     type(dataset).engines[dataset._connection_str] = fake_engine
@@ -137,6 +138,42 @@ def test_save_filters_out_columns_missing_from_existing_table(monkeypatch):
     )
 
     assert captured["columns"] == ["id", "_load_datetime"]
+
+
+def test_save_drops_and_recreates_table_when_new_columns_are_added(monkeypatch):
+    dataset = TruncateAppendSQLTableDataset(
+        table_name="map_work_author",
+        credentials={"con": "postgresql://unit-test-added-columns"},
+        save_args={"schema": "ldg_openalex"},
+    )
+    fake_engine = _RecordingEngine()
+    type(dataset).engines[dataset._connection_str] = fake_engine
+    monkeypatch.setattr(dataset, "_exists", lambda: True)
+    monkeypatch.setattr(dataset, "_get_existing_column_names", lambda: ["work_id", "author_id"])
+
+    captured: dict[str, object] = {}
+
+    def fake_to_sql(self, *, con, **kwargs):
+        captured["columns"] = list(self.columns)
+        captured["con"] = con
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(pd.DataFrame, "to_sql", fake_to_sql)
+
+    dataset.save(
+        pd.DataFrame(
+            {
+                "work_id": ["https://openalex.org/W1"],
+                "author_id": ["https://openalex.org/A1"],
+                "author_display_name": ["Ada Lovelace"],
+            }
+        )
+    )
+
+    assert fake_engine.connection.statements == [
+        "DROP TABLE ldg_openalex.map_work_author"
+    ]
+    assert captured["columns"] == ["work_id", "author_id", "author_display_name"]
 
 def test_catalog_uses_custom_dataset_for_landing_tables():
     config_loader = OmegaConfigLoader(
