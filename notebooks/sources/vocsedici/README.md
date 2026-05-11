@@ -33,6 +33,12 @@ Adminer queda disponible en `http://localhost:8080`.
 
 - `node`
 - `node_field_data`
+- `paragraphs_item`
+- `paragraphs_item_field_data`
+- `paragraph__field_persona_id`
+- `paragraph__field_institucion`
+- `paragraph__field_fecha_inicio`
+- `paragraph__field_fecha_fin`
 - `node__field_nombre`
 - `node__field_apellido`
 - `node__field_orcid`
@@ -63,3 +69,8 @@ Extract y landing conservan tablas crudas con metadata de proceso:
 - `_load_datetime`
 
 Los joins para `persona`, `institucion` y demas modelos quedan para dbt.
+
+En particular, la relacion persona-institucion puede modelarse desde `paragraphs`:
+- `paragraphs_item_field_data.parent_id` referencia el `nid` del nodo persona
+- `paragraph__field_institucion.field_institucion_target_id` referencia el `nid` del nodo institucion
+- `paragraph__field_fecha_inicio` y `paragraph__field_fecha_fin` permiten modelar vigencia
