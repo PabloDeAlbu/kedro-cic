@@ -25,6 +25,11 @@
     schema: "dspace"
   credentials: "dspacedb"
 
+"voc_mariadb/{table}":
+  type: pandas.SQLTableDataset
+  table_name: "{table}"
+  credentials: "voc_mariadb"
+
 "raw/{source}/{entity}":
   type: pandas.CSVDataset
   filepath: "data/01_raw/{source}/{entity}.csv"

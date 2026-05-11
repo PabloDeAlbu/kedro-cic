@@ -14,6 +14,8 @@ from kedro_cic.pipelines.openaire_extract import create_pipeline as create_opena
 from kedro_cic.pipelines.openaire_load import create_pipeline as create_openaire_load
 from kedro_cic.pipelines.openalex_extract import create_pipeline as create_openalex_extract
 from kedro_cic.pipelines.openalex_load import create_pipeline as create_openalex_load
+from kedro_cic.pipelines.vocsedici_extract import create_pipeline as create_vocsedici_extract
+from kedro_cic.pipelines.vocsedici_load import create_pipeline as create_vocsedici_load
 
 
 def register_pipelines() -> Dict[str, Pipeline]:
@@ -34,6 +36,8 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "openaire_load": create_openaire_load(),
         "openalex_extract": create_openalex_extract(),
         "openalex_load": create_openalex_load(),
+        "vocsedici_extract": create_vocsedici_extract(),
+        "vocsedici_load": create_vocsedici_load(),
     }
     pipelines["__default__"] = sum(pipelines.values())
     return pipelines

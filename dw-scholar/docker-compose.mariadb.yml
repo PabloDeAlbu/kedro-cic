@@ -1,0 +1,27 @@
+services:
+  mariadb:
+    image: mariadb:10.4
+    container_name: "${COMPOSE_PROJECT_NAME}_mariadb"
+    environment:
+      MARIADB_DATABASE: "${VOC_DB:-voc_sedici}"
+      MARIADB_USER: "${VOC_USER:-voc_user}"
+      MARIADB_PASSWORD: "${VOC_PASSWORD:-voc_password}"
+      MARIADB_ROOT_PASSWORD: "${VOC_ROOT_PASSWORD:-root_password}"
+    ports:
+      - "${VOC_DB_PORT:-3307}:3306"
+    restart: unless-stopped
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  adminer:
+    image: adminer:4
+    container_name: "${COMPOSE_PROJECT_NAME}_adminer"
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+      ADMINER_DESIGN: pepa-linha
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:

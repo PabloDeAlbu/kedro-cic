@@ -1,0 +1,26 @@
+vocsedici_extract_options:
+  env: dev
+  source_label: voc_sedici
+  filter_param: ""
+  filter_value:
+  tables:
+    - node
+    - node_field_data
+    - node__field_nombre
+    - node__field_apellido
+    - node__field_orcid
+    - node__field_mail
+    - node__field_dni
+    - node__field_cuit
+    - node__field_telefono
+    - node__field_direcci_n
+    - node__field_google_scholar
+    - node__field_researchgate
+    - node__field_old_id
+    - node__field_filiacion
+    - node__field_nombre_institucion
+    - node__field_nombre_institucion_variant
+    - node__field_abreviatura
+    - node__field_id_pidu
+    - node__field_id_termino
+    - node__field_padre
