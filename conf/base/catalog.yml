@@ -51,9 +51,9 @@
     kedro-viz:
       layer: raw
 
-"raw/google-scholar/files":
+"raw/google_scholar/html":
   type: partitions.PartitionedDataset
-  path: data/01_raw/google-scholar
+  path: data/01_raw/google-scholar/html
   filename_suffix: ".html"
   dataset:
     type: text.TextDataset

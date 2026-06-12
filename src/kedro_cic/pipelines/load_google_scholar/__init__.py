@@ -1,5 +1,5 @@
 """
-This is a boilerplate pipeline 'gs_load'
+This is a boilerplate pipeline 'load_google_scholar'
 generated using Kedro 1.1.1
 """
 
