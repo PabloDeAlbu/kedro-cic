@@ -1,0 +1,28 @@
+# This is a boilerplate parameters config generated for pipeline 'extract_openaire'
+# using Kedro 1.1.1.
+#
+# Documentation for this file format can be found in "Parameters"
+# Link: https://docs.kedro.org/en/1.1.1/configuration/parameters.html
+extract_openaire_options:
+
+    access_token: REPLACE_ME
+    refresh_token: REPLACE_ME
+
+    filter_param: relOrganizationId
+    # ror_filter_value: https://ror.org/02s7sax82   ## cic ror
+    # ror_filter_value: https://ror.org/03cqe8w59   ## conicet ror
+    ror_filter_value: https://ror.org/01tjs6929     ## unlp ror
+
+    organizations_endpoint: organizations
+    organizations_filter: 'pid'
+    
+    researchproducts_endpoint: researchProducts
+    researchproducts_filter: 'relOrganizationId'
+
+    datasources_endpoint: dataSources
+    datasources_filter: 'relOrganizationId'
+
+    projects_endpoint: projects
+    projects_filter: 'relOrganizationId'
+
+    env: dev

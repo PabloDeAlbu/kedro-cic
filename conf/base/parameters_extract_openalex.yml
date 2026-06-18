@@ -1,0 +1,32 @@
+extract_openalex_options:
+
+    author_endpoint: authors
+    author_filter: 'affiliations.institution.ror'
+    author_query_options:
+        per_page: 200
+        extra_filters: {}
+
+    funder_endpoint: funders
+    funder_filter: 'ror'
+    funder_query_options:
+        per_page: 200
+        extra_filters: {}
+
+    institution_endpoint: institutions
+    institution_filter: 'ror'
+    institution_query_options:
+        per_page: 200
+        extra_filters: {}
+#    institution_ror: 'https://ror.org/02s7sax82' # cic ror
+#    institution_ror: 'https://ror.org/03cqe8w59' # conicet ror
+    institution_ror: 'https://ror.org/01tjs6929' # unlp ror
+
+    work_endpoint: works
+    work_filter: 'institutions.ror'
+    work_query_options:
+        per_page: 200
+        extra_filters:
+            from_publication_date: '2020-01-01'
+            to_publication_date: '2020-06-01'
+
+    env: dev

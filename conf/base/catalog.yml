@@ -58,6 +58,21 @@
   dataset:
     type: text.TextDataset
 
+"raw/{source}/{entity}/csv/{filename}":
+  type: pandas.CSVDataset
+  filepath: data/01_raw/{source}/{entity}/csv/{filename}.csv
+
+"raw/{source}/{entity}/html":
+  type: partitions.PartitionedDataset
+  path: data/01_raw/{source}/{entity}/html
+  filename_suffix: ".html"
+  dataset:
+    type: text.TextDataset
+
+"raw/{source}/{entity}/parquet/{filename}":
+  type: pandas.ParquetDataset
+  filepath: data/01_raw/{source}/{entity}/parquet/{filename}.parquet
+
 "memory/openalex/work":
   type: MemoryDataset
 

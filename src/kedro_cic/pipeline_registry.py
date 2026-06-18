@@ -6,6 +6,14 @@ from kedro.pipeline import Pipeline
 from kedro_cic.pipelines.dspace5_extract import create_pipeline as create_dspace5_extract
 from kedro_cic.pipelines.dspace5_load import create_pipeline as create_dspace5_load
 from kedro_cic.pipelines.dspacedb import create_pipeline as create_dspacedb
+from kedro_cic.pipelines.extract_openaire import (
+    create_pipeline as create_extract_openaire,
+)
+from kedro_cic.pipelines.extract_openalex import (
+    create_pipeline as create_extract_openalex,
+)
+from kedro_cic.pipelines.load_openaire import create_pipeline as create_load_openaire
+from kedro_cic.pipelines.load_openalex import create_pipeline as create_load_openalex
 from kedro_cic.pipelines.load_google_scholar import (
     create_pipeline as create_load_google_scholar,
 )
@@ -30,7 +38,11 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "dspace5_extract": create_dspace5_extract(),
         "dspace5_load": create_dspace5_load(),
         "dspacedb": create_dspacedb(),
+        "extract_openaire": create_extract_openaire(),
+        "extract_openalex": create_extract_openalex(),
         "load_google_scholar": create_load_google_scholar(),
+        "load_openaire": create_load_openaire(),
+        "load_openalex": create_load_openalex(),
         "oai_extract": create_oai_extract(),
         "oai_load": create_oai_load(),
         "oai_load_item": create_oai_load_item(),

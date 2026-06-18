@@ -20,72 +20,76 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="openalex_load_author",
             func=openalex_load_author,
             inputs='raw/openalex/author#parquet',
-            outputs='ldg/openalex/author'
+            outputs='ldg/legacy_openalex/author'
             ),
         node(
             name="openalex_load_author_institution_year",
             func=openalex_load_author_institution_year,
             inputs='raw/openalex/author#parquet',
-            outputs='ldg/openalex/map_author_institution_year'
+            outputs='ldg/legacy_openalex/map_author_institution_year'
             ),
         node(
             name="openalex_load_author_topic",
             func=openalex_load_author_topic,
             inputs='raw/openalex/author#parquet',
-            outputs='ldg/openalex/map_author_topic'
+            outputs='ldg/legacy_openalex/map_author_topic'
             ),
         node(
             name="openalex_stage_work",
             func=openalex_stage_work,
             inputs='raw/openalex/work#parquet',
-            outputs='memory/openalex/work'
+            outputs='memory/legacy_openalex/work'
             ),
         node(
             name="openalex_load_work",
             func=openalex_load_work,
-            inputs='memory/openalex/work',
-            outputs='ldg/openalex/work'
+            inputs='memory/legacy_openalex/work',
+            outputs='ldg/legacy_openalex/work'
             ),
         node(
             name="openalex_load_work_authorships",
             func=openalex_load_work_authorships,
-            inputs='memory/openalex/work',
-            outputs=['ldg/openalex/map_work_author', 'ldg/openalex/map_work_institution', 'ldg/openalex/map_author_institution']
+            inputs='memory/legacy_openalex/work',
+            outputs=[
+                'ldg/legacy_openalex/map_work_author',
+                'ldg/legacy_openalex/map_work_institution',
+                'ldg/legacy_openalex/map_author_institution',
+            ]
             ),
         node(
             name="openalex_load_work_concept",
             func=openalex_load_work_concept,
-            inputs='memory/openalex/work',
-            outputs='ldg/openalex/map_work_concept'
+            inputs='memory/legacy_openalex/work',
+            outputs='ldg/legacy_openalex/map_work_concept'
             ),
         node(
             name="openalex_load_work_corresponding_author_ids",
             func=openalex_load_work_corresponding_author_ids,
-            inputs='memory/openalex/work',
-            outputs='ldg/openalex/map_work_corresponding_author_id'
+            inputs='memory/legacy_openalex/work',
+            outputs='ldg/legacy_openalex/map_work_corresponding_author_id'
             ),
         node(
             name="openalex_load_work_referenced_works",
             func=openalex_load_work_referenced_works,
-            inputs='memory/openalex/work',
-            outputs='ldg/openalex/map_work_referenced_work'
+            inputs='memory/legacy_openalex/work',
+            outputs='ldg/legacy_openalex/map_work_referenced_work'
             ),
         node(
             name="openalex_load_work_topics",
             func=openalex_load_work_topics,
-            inputs='memory/openalex/work',
-            outputs='ldg/openalex/map_work_topic'
+            inputs='memory/legacy_openalex/work',
+            outputs='ldg/legacy_openalex/map_work_topic'
             ),
         node(
             name="openalex_load_work_location",
             func=openalex_load_work_location,
-            inputs='memory/openalex/work',
-            outputs='ldg/openalex/map_work_location'
+            inputs='memory/legacy_openalex/work',
+            outputs='ldg/legacy_openalex/map_work_location'
             ),
         node(
             name="openalex_load_institution",
             func=openalex_load_institution,
             inputs='raw/openalex/institution#parquet',
-            outputs='ldg/openalex/institution'
+            outputs='ldg/legacy_openalex/institution'
             ),      
     ], tags="openalex_load")
