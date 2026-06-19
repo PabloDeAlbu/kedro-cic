@@ -18,6 +18,13 @@
     schema: "public"
   credentials: "dspace5"
 
+"dspacedb5/public/{table}":
+  type: pandas.SQLTableDataset
+  table_name: "{table}"
+  load_args:
+    schema: "public"
+  credentials: "dspacedb5"
+
 "dspacedb/dspace/{table}":
   type: pandas.SQLTableDataset
   table_name: "{table}"

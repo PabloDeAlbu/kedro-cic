@@ -1,0 +1,20 @@
+extract_dspacedb5_options:
+  env: dev
+  source_label: sedici
+  institution_ror: https://ror.org/01tjs6929
+  filter_param: ""
+  filter_value:
+  tables:
+    - bitstream
+    - bundle2bitstream
+    - collection2item
+    - collection
+    - community2collection
+    - community2community
+    - community
+    - handle
+    - item2bundle
+    - item
+    - metadatafieldregistry
+    - metadataschemaregistry
+    - metadatavalue

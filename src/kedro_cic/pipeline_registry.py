@@ -6,6 +6,9 @@ from kedro.pipeline import Pipeline
 from kedro_cic.pipelines.dspace5_extract import create_pipeline as create_dspace5_extract
 from kedro_cic.pipelines.dspace5_load import create_pipeline as create_dspace5_load
 from kedro_cic.pipelines.dspacedb import create_pipeline as create_dspacedb
+from kedro_cic.pipelines.extract_dspacedb5 import (
+    create_pipeline as create_extract_dspacedb5,
+)
 from kedro_cic.pipelines.extract_openaire import (
     create_pipeline as create_extract_openaire,
 )
@@ -37,6 +40,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "dspace5_extract": create_dspace5_extract(),
         "dspace5_load": create_dspace5_load(),
         "dspacedb": create_dspacedb(),
+        "extract_dspacedb5": create_extract_dspacedb5(),
         "extract_openaire": create_extract_openaire(),
         "extract_openalex": create_extract_openalex(),
         "load_dspacedb5": create_load_dspacedb5(),
