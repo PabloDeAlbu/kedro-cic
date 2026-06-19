@@ -1,0 +1,15 @@
+load_dspacedb5_options:
+  tables:
+    - bitstream
+    - bundle2bitstream
+    - collection2item
+    - collection
+    - community2collection
+    - community2community
+    - community
+    - handle
+    - item2bundle
+    - item
+    - metadatafieldregistry
+    - metadataschemaregistry
+    - metadatavalue
