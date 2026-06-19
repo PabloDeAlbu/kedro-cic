@@ -1,4 +1,8 @@
-vocsedici_load_options:
+extract_vocsedici_options:
+  env: dev
+  source_label: voc_sedici
+  filter_param: ""
+  filter_value:
   tables:
     - node
     - node_field_data

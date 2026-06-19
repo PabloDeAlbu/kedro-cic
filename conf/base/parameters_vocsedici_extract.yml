@@ -6,6 +6,12 @@ vocsedici_extract_options:
   tables:
     - node
     - node_field_data
+    - paragraphs_item
+    - paragraphs_item_field_data
+    - paragraph__field_persona_id
+    - paragraph__field_institucion
+    - paragraph__field_fecha_inicio
+    - paragraph__field_fecha_fin
     - node__field_nombre
     - node__field_apellido
     - node__field_orcid

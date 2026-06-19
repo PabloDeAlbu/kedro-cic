@@ -10,6 +10,12 @@ def test_vocsedici_extract_tables_adds_extract_metadata():
         [
             "node",
             "node_field_data",
+            "paragraphs_item",
+            "paragraphs_item_field_data",
+            "paragraph__field_persona_id",
+            "paragraph__field_institucion",
+            "paragraph__field_fecha_inicio",
+            "paragraph__field_fecha_fin",
             "node__field_nombre",
             "node__field_apellido",
             "node__field_orcid",
@@ -33,7 +39,7 @@ def test_vocsedici_extract_tables_adds_extract_metadata():
         "dev",
         "",
         None,
-        *([base_df] * 20),
+        *([base_df] * 26),
     )
 
     extracted_node = outputs[0]

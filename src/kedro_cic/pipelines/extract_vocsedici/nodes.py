@@ -54,7 +54,7 @@ def _add_extract_metadata(
     return enriched_df
 
 
-def vocsedici_extract_tables(
+def extract_vocsedici_tables(
     tables,
     source_label,
     extract_env,

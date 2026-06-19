@@ -1,4 +1,4 @@
-vocsedici_load_options:
+load_vocsedici_options:
   tables:
     - node
     - node_field_data

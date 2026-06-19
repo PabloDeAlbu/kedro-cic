@@ -1,6 +1,6 @@
 import pandas as pd
 
-from kedro_cic.pipelines.vocsedici_load.nodes import load_vocsedici_tables
+from kedro_cic.pipelines.load_vocsedici.nodes import load_vocsedici_tables
 
 
 def test_load_vocsedici_tables_preserves_extract_metadata_and_adds_load_datetime():

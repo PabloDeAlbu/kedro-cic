@@ -5,8 +5,8 @@ Guia de uso para la ingesta exploratoria de `voc.sedici` desde Drupal/MariaDB.
 ## Flujo
 
 1. Levantar MariaDB local y restaurar el dump desde `dw-scholar/`.
-2. Ejecutar `vocsedici_extract` para copiar tablas Drupal relevantes a parquet.
-3. Ejecutar `vocsedici_load` para cargar esas mismas tablas en landing.
+2. Probar `01_extract/extract_vocsedici.ipynb` y ejecutar `extract_vocsedici` para copiar tablas Drupal relevantes a parquet.
+3. Probar `02_load/load_vocsedici.ipynb` y ejecutar `load_vocsedici` para cargar esas mismas tablas en landing.
 4. Modelar despues en dbt sobre `ldg_vocsedici`.
 
 ## Infra local
@@ -23,11 +23,13 @@ Adminer queda disponible en `http://localhost:8080`.
 
 ## Pipelines Kedro
 
-`vocsedici_extract`:
+`extract_vocsedici`:
 - copia tablas Drupal relevantes a `raw/voc/*.parquet`
 
-`vocsedici_load`:
+`load_vocsedici`:
 - vuelca esas tablas a `ldg/vocsedici/*`
+
+Los pipelines legacy `vocsedici_extract` y `vocsedici_load` quedan temporalmente para compatibilidad, con outputs `_legacy`.
 
 ## Tablas actuales
 
