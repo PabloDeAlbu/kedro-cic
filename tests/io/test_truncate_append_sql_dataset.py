@@ -195,26 +195,3 @@ def test_catalog_uses_custom_dataset_for_landing_tables():
     assert dataset_config["truncate"] is True
     assert dataset_config["truncate_cascade"] is False
 
-
-def test_catalog_overrides_dspace5_metadatavalue_chunksize():
-    config_loader = OmegaConfigLoader(
-        conf_source=str(Path.cwd() / "conf"),
-        base_env="base",
-        default_run_env="local",
-    )
-
-    catalog_config = config_loader["catalog"]
-    dataset_config = catalog_config["ldg/dspace5/metadatavalue"]
-
-    assert (
-        dataset_config["type"]
-        == "kedro_cic.io.truncate_append_sql_dataset.TruncateAppendSQLTableDataset"
-    )
-    assert dataset_config["table_name"] == "metadatavalue"
-    assert dataset_config["load_args"] == {"schema": "ldg_dspace5"}
-    assert dataset_config["save_args"] == {
-        "schema": "ldg_dspace5",
-        "chunksize": 100,
-    }
-    assert dataset_config["truncate"] is True
-    assert dataset_config["truncate_cascade"] is False

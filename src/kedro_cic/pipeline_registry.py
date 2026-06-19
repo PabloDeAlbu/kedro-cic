@@ -3,8 +3,6 @@ from typing import Dict
 
 from kedro.pipeline import Pipeline
 
-from kedro_cic.pipelines.dspace5_extract import create_pipeline as create_dspace5_extract
-from kedro_cic.pipelines.dspace5_load import create_pipeline as create_dspace5_load
 from kedro_cic.pipelines.dspacedb import create_pipeline as create_dspacedb
 from kedro_cic.pipelines.extract_dspacedb5 import (
     create_pipeline as create_extract_dspacedb5,
@@ -43,8 +41,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
         A mapping from pipeline names to ``Pipeline`` objects.
     """
     pipelines = {
-        "dspace5_extract": create_dspace5_extract(),
-        "dspace5_load": create_dspace5_load(),
         "dspacedb": create_dspacedb(),
         "extract_dspacedb5": create_extract_dspacedb5(),
         "extract_openaire": create_extract_openaire(),
