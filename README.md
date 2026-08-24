@@ -23,7 +23,7 @@ Layer-wise, the typical flow is: extraction/landing (raw/`ldg_`) → integration
 
 ## Available pipelines
 Pipeline names match the modules in `src/kedro_cic/pipelines/`:
-- OAI-PMH: `oai_extract`, `oai_load`, `oai_load_item`
+- OAI-PMH: `oai_extract`, `oai_load`
 - OpenAIRE: `openaire_extract`, `openaire_load`
 - OpenAlex: `openalex_extract`, `openalex_load`
 - DSpace DB: `dspacedb`
@@ -35,6 +35,42 @@ Examples:
 
 ## Visualization (Kedro-Viz)
 - Start Kedro-Viz: `kedro viz`
+
+## OAI-PMH por fuente
+
+El área raw conserva el último snapshot OAI descargado, independientemente de
+la institución:
+
+```text
+data/01_raw/oai/identifiers.parquet
+data/01_raw/oai/records.parquet
+```
+
+La configuración local define la procedencia que se incorpora a cada fila:
+
+```yaml
+# conf/local/parameters_oai_extract.yml
+oai_extract_options:
+  source_key: uca
+  base_url: https://repositorio.uca.edu.ar/oai
+  context: request
+  repository_identifier: repositorio.uca.edu.ar
+  institution_ror: https://ror.org/0422kzb24
+  metadata_prefix: oai_dc
+  dev_page_limit: 2
+  env: dev
+```
+
+La prueba acotada de registros se ejecuta en dos pasos:
+
+```bash
+kedro run --pipeline oai_extract --nodes oai_extract_records
+kedro run --pipeline oai_load --nodes oai_load_records
+```
+
+El modo `dev` limita la extracción a `dev_page_limit` páginas y la carga a un
+máximo de 1.000 registros. La tabla landing conserva solamente el último
+batch; debe procesarse aguas abajo antes de cargar otra fuente.
 
 ## Notebooks
 - Start an interactive environment: `kedro jupyter lab` (or `kedro jupyter notebook`).

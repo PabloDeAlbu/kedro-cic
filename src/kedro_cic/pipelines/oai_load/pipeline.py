@@ -2,7 +2,6 @@ from kedro.pipeline import Node, Pipeline
 from .nodes import (
     oai_load_identifiers,
     oai_load_records,
-    oai_load_sets,
 )
 
 
@@ -39,12 +38,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                     "ldg/oai/map_record_format",
                     "ldg/oai/map_record_set",
                 ],
-            ),
-            Node(
-                name="oai_load_sets",
-                func=oai_load_sets,
-                inputs="raw/oai/sets",
-                outputs="ldg/oai/sets",
             ),
         ],
         tags="oai_load",

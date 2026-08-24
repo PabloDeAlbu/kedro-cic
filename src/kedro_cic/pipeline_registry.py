@@ -29,7 +29,6 @@ from kedro_cic.pipelines.load_google_scholar import (
 )
 from kedro_cic.pipelines.oai_extract import create_pipeline as create_oai_extract
 from kedro_cic.pipelines.oai_load import create_pipeline as create_oai_load
-from kedro_cic.pipelines.oai_load_item import create_pipeline as create_oai_load_item
 from kedro_cic.pipelines.vocsedici_extract import create_pipeline as create_vocsedici_extract
 from kedro_cic.pipelines.vocsedici_load import create_pipeline as create_vocsedici_load
 
@@ -53,7 +52,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "load_vocsedici": create_load_vocsedici(),
         "oai_extract": create_oai_extract(),
         "oai_load": create_oai_load(),
-        "oai_load_item": create_oai_load_item(),
         "vocsedici_extract": create_vocsedici_extract(),
         "vocsedici_load": create_vocsedici_load(),
     }

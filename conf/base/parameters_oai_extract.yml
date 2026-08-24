@@ -4,9 +4,14 @@
 # Documentation for this file format can be found in "Parameters"
 # Link: https://docs.kedro.org/en/0.19.9/configuration/parameters.html
 oai_extract_options:
-    # Replace with OAI URL endpoint
-    base_url: 'https://ri.conicet.gov.ar/oai/'
-    context: 'request'
+    source_key: conicet
+    base_url: https://ri.conicet.gov.ar/oai
+    context: request
+    repository_identifier: ri.conicet.gov.ar
+    institution_ror: https://ror.org/03cqe8w59
+    metadata_prefix: oai_dc
+    dev_page_limit: 2
+    initial_resumption_token: null
+    page_limit: null
     iteration_limit: 1
-
     env: dev

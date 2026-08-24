@@ -1,24 +1,50 @@
-from datetime import date
-
 import pandas as pd
 
 
-def _pick_load_dt(df: pd.DataFrame):
-    # Si hay una sola fecha en el batch, usala; si hay varias, quedate con la más reciente;
-    # si no hay, hoy.
-    if 'load_datetime' not in df.columns or df['_load_datetime'].isna().all():
-        return date.today()
-    vals = df['_load_datetime'].dropna()
-    if vals.nunique() == 1:
-        return vals.iloc[0]
-    return pd.to_datetime(vals).max().date()
+def _pick_load_datetime(df: pd.DataFrame) -> pd.Timestamp:
+    """Return the batch load timestamp, preserving an existing value if present."""
+    for column in ("load_datetime", "_load_datetime"):
+        if column not in df.columns:
+            continue
+        values = pd.to_datetime(df[column], errors="coerce", utc=True).dropna()
+        if not values.empty:
+            return values.max()
+    return pd.Timestamp.now(tz="UTC")
+
+
+def _normalize_extract_datetime(df: pd.DataFrame) -> pd.DataFrame:
+    """Expose the raw extraction timestamp under the landing contract name."""
+    if "extract_datetime" in df.columns:
+        return df
+    if "_extract_datetime" not in df.columns:
+        raise ValueError("OAI records require _extract_datetime")
+    return df.rename(columns={"_extract_datetime": "extract_datetime"})
 
 
 def oai_load_identifiers(df_identifiers_raw: pd.DataFrame) -> pd.DataFrame:
-    load_dt = _pick_load_dt(df_identifiers_raw)
+    df_identifiers_raw = _normalize_extract_datetime(df_identifiers_raw.copy())
+    load_dt = _pick_load_datetime(df_identifiers_raw)
 
-    df_identifiers = df_identifiers_raw[['record_id', 'datestamp', 'extract_datetime']].copy()
-    df_identifiers_sets = df_identifiers_raw[['record_id', 'set_id', 'extract_datetime']].explode('set_id')
+    identifier_columns = [
+        'record_id',
+        'datestamp',
+        'is_deleted',
+        'extract_datetime',
+        '_context',
+        '_source_key',
+        '_repository_identifier',
+        '_institution_ror',
+        '_base_url',
+        '_metadata_prefix',
+    ]
+    df_identifiers = df_identifiers_raw[identifier_columns].copy()
+    df_identifiers_sets = (
+        df_identifiers_raw[
+            ['record_id', 'set_id', 'extract_datetime', '_source_key']
+        ]
+        .explode('set_id', ignore_index=True)
+        .dropna(subset=['set_id'])
+    )
 
     df_identifiers['_load_datetime'] = load_dt
     df_identifiers_sets['_load_datetime'] = load_dt
@@ -27,8 +53,8 @@ def oai_load_identifiers(df_identifiers_raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def oai_load_records(df_records_raw: pd.DataFrame, env: str = 'dev') -> pd.DataFrame:
-    df_records_raw = df_records_raw.copy()
-    load_dt = _pick_load_dt(df_records_raw)
+    df_records_raw = _normalize_extract_datetime(df_records_raw.copy())
+    load_dt = _pick_load_datetime(df_records_raw)
 
     if env == 'dev':
         df_records_raw = df_records_raw.head(1000)
@@ -40,17 +66,32 @@ def oai_load_records(df_records_raw: pd.DataFrame, env: str = 'dev') -> pd.DataF
         base_cols = ['record_id', column, 'extract_datetime']
         missing_cols = [col for col in base_cols if col not in df_records_raw.columns]
         if missing_cols:
-            # Si la columna no existe, devolvé un df vacío con las columnas esperadas
-            return pd.DataFrame(columns=base_cols + ['_load_datetime'])
+            raise ValueError(
+                f"OAI records require columns for {column}: {missing_cols}"
+            )
         return (
             _select(base_cols)
             .explode(column, ignore_index=True)
+            .dropna(subset=[column])
             .assign(load_datetime=load_dt)
         )
 
-    df_records = _select(['record_id','col_id','title','date_issued', 'extract_datetime','_context']).assign(load_datetime=load_dt)
+    record_columns = [
+        'record_id',
+        'col_id',
+        'title',
+        'date_issued',
+        'extract_datetime',
+        '_context',
+        '_source_key',
+        '_repository_identifier',
+        '_institution_ror',
+        '_base_url',
+        '_metadata_prefix',
+    ]
+    df_records = _select(record_columns).assign(load_datetime=load_dt)
     df_record_creators = _explode('creators')
-    df_record_descriptions = _explode('descriptions')
+    df_record_descriptions = _explode('description')
     df_record_types = _explode('types')
     df_record_identifiers = _explode('identifiers')
     df_record_languages = _explode('languages')
@@ -76,7 +117,7 @@ def oai_load_records(df_records_raw: pd.DataFrame, env: str = 'dev') -> pd.DataF
 def oai_load_sets(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
-    load_dt = _pick_load_dt(df)
+    load_dt = _pick_load_datetime(df)
     df.dropna(inplace=True)
     df['_load_datetime'] = load_dt
 

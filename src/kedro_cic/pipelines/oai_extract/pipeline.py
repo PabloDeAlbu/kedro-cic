@@ -1,67 +1,29 @@
 from kedro.pipeline import Node, Pipeline
+
 from .nodes import (
+    oai_extract_identifiers,
     oai_extract_records,
-    oai_extract_sets,
-    oai_filter_col,    
-    oai_intermediate_sets,
-    oai_extract_identifiers_by_sets,
-    oai_extract_records_by_identifiers
 )
+
 
 def create_pipeline(**kwargs) -> Pipeline:
     return Pipeline([
         Node(
-            name="oai_extract_sets",
-            func=oai_extract_sets,
+            name="oai_extract_identifiers",
+            func=oai_extract_identifiers,
             inputs=[
                 "params:oai_extract_options.base_url",
                 "params:oai_extract_options.context",
                 "params:oai_extract_options.env",
+                "params:oai_extract_options.source_key",
+                "params:oai_extract_options.repository_identifier",
+                "params:oai_extract_options.institution_ror",
+                "params:oai_extract_options.metadata_prefix",
+                "params:oai_extract_options.dev_page_limit",
+                "params:oai_extract_options.initial_resumption_token",
+                "params:oai_extract_options.page_limit",
             ],
-            outputs="raw/oai/sets"
-        ),
-
-        Node(
-            name="oai_intermediate_sets",
-            func=oai_intermediate_sets,
-            inputs="raw/oai/sets",
-            outputs="intermediate/oai/sets"
-        ),
-
-        Node(
-            name="oai_filter_col",
-            func=oai_filter_col,
-            inputs=[
-                "intermediate/oai/sets",
-                "params:oai_extract_options.env",
-            ],
-            outputs="intermediate/oai/cols"
-        ),
-
-        Node(
-            name="oai_extract_identifiers_by_sets",
-            func=oai_extract_identifiers_by_sets,
-            inputs=[
-                "params:oai_extract_options.base_url",
-                "params:oai_extract_options.context",
-                "params:oai_extract_options.env",
-                "intermediate/oai/cols",
-                "params:oai_extract_options.iteration_limit",
-            ],
-            outputs=["primary/oai/identifiers#parquet","primary/oai/cols#parquet" , "primary/oai/identifiers_dev"]
-        ),
-
-        Node(
-            name="oai_extract_records_by_identifiers",
-            func=oai_extract_records_by_identifiers,
-            inputs=[
-                "params:oai_extract_options.base_url",
-                "params:oai_extract_options.context",
-                "params:oai_extract_options.env",
-                "intermediate/oai/identifiers",
-                "params:oai_extract_options.iteration_limit",
-            ],
-            outputs=["primary/oai/records","primary/oai/records_sets" , "primary/oai/records_dev"]
+            outputs=["raw/oai/identifiers#parquet", "raw/oai/identifiers_dev"],
         ),
         Node(
             name="oai_extract_records",
@@ -70,6 +32,13 @@ def create_pipeline(**kwargs) -> Pipeline:
                 "params:oai_extract_options.base_url",
                 "params:oai_extract_options.context",
                 "params:oai_extract_options.env",
+                "params:oai_extract_options.source_key",
+                "params:oai_extract_options.repository_identifier",
+                "params:oai_extract_options.institution_ror",
+                "params:oai_extract_options.metadata_prefix",
+                "params:oai_extract_options.dev_page_limit",
+                "params:oai_extract_options.initial_resumption_token",
+                "params:oai_extract_options.page_limit",
             ],
             outputs=["raw/oai/records#parquet" , "raw/oai/records_dev"]
         ),

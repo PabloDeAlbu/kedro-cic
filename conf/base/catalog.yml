@@ -30,6 +30,48 @@
   table_name: "{table}"
   credentials: "voc_mariadb"
 
+"raw/oai/records#parquet":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/oai/records.parquet"
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/oai/records_dev":
+  type: pandas.CSVDataset
+  filepath: "data/01_raw/oai/records_dev.csv"
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/oai/identifiers#parquet":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/oai/identifiers.parquet"
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/oai/identifiers_dev":
+  type: pandas.CSVDataset
+  filepath: "data/01_raw/oai/identifiers_dev.csv"
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/oai/records_recovered#parquet":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/oai/records_recovered.parquet"
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/oai/record_errors#parquet":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/oai/record_errors.parquet"
+  metadata:
+    kedro-viz:
+      layer: raw
+
 "raw/{source}/{entity}":
   type: pandas.CSVDataset
   filepath: "data/01_raw/{source}/{entity}.csv"

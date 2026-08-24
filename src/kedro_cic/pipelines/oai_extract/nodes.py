@@ -1,13 +1,22 @@
 import os
 import time
-import certifi
-import requests
-import pandas as pd
 import xml.etree.ElementTree as ET
+from urllib.parse import urlencode
+
+import certifi
+import pandas as pd
+import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 
-def get_oai_response(base_url, verify=None, max_retries=3, backoff_factor=1.0, min_interval=0.0):
+def get_oai_response(
+    base_url,
+    verify=None,
+    max_retries=3,
+    backoff_factor=1.0,
+    min_interval=0.0,
+    timeout=30.0,
+):
 
     # Usa el bundle de certifi para evitar errores de certificado en requests
     os.environ.setdefault("REQUESTS_CA_BUNDLE", certifi.where())
@@ -25,7 +34,7 @@ def get_oai_response(base_url, verify=None, max_retries=3, backoff_factor=1.0, m
         response = None
         error = None
         try:
-            response = requests.get(base_url, verify=verify_param)
+            response = requests.get(base_url, verify=verify_param, timeout=timeout)
         except requests.RequestException as exc:
             error = exc
         elapsed_time = time.time() - start_time
@@ -39,10 +48,10 @@ def get_oai_response(base_url, verify=None, max_retries=3, backoff_factor=1.0, m
         if error:
             print(f"Error en request (intento {attempt}/{max_retries}): {error}")
 
-        if response and response.status_code == 200:
+        if response is not None and response.status_code == 200:
             return response
 
-        status = response.status_code if response else "sin respuesta"
+        status = response.status_code if response is not None else "sin respuesta"
         print(f"Error: {status} (intento {attempt}/{max_retries})")
 
         if attempt < max_retries:
@@ -64,6 +73,81 @@ def log_oai_progress(token_elem, total_processed: int):
     except ValueError:
         # Si el servidor devuelve valores no numéricos, ignora el progreso.
         pass
+
+
+def oai_extract_identifiers(
+    base_url: str,
+    context: str,
+    env: str,
+    source_key: str,
+    repository_identifier: str,
+    institution_ror: str,
+    metadata_prefix: str = "oai_dc",
+    dev_page_limit: int = 2,
+    initial_resumption_token: str | None = None,
+    page_limit: int | None = None,
+    verify=None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Build the repository manifest from OAI-PMH ListIdentifiers."""
+    identifiers = []
+    iteration_limit = dev_page_limit if env == "dev" else page_limit
+    resumption_token = initial_resumption_token
+    iteration_count = 0
+
+    while iteration_limit is None or iteration_count < iteration_limit:
+        if resumption_token:
+            params = (
+                f"/{context}?verb=ListIdentifiers"
+                f"&resumptionToken={resumption_token}"
+            )
+        else:
+            params = (
+                f"/{context}?verb=ListIdentifiers"
+                f"&metadataPrefix={metadata_prefix}"
+            )
+        url = base_url.rstrip("/") + params
+        print(f"Consultando: {url}")
+
+        response = get_oai_response(url, verify=verify)
+        if response is None or not response.ok:
+            raise RuntimeError(f"No se pudo completar el manifiesto OAI: {url}")
+
+        try:
+            root = ET.fromstring(response.text)
+        except ET.ParseError as error:
+            raise RuntimeError(f"Respuesta XML inválida para: {url}") from error
+
+        ns = {"oai": "http://www.openarchives.org/OAI/2.0/"}
+        headers = root.findall(".//oai:header", ns)
+        for header in headers:
+            identifier = header.find("oai:identifier", ns)
+            datestamp = header.find("oai:datestamp", ns)
+            identifiers.append(
+                {
+                    "record_id": identifier.text if identifier is not None else None,
+                    "datestamp": datestamp.text if datestamp is not None else None,
+                    "set_id": [node.text for node in header.findall("oai:setSpec", ns)],
+                    "is_deleted": header.get("status") == "deleted",
+                }
+            )
+
+        iteration_count += 1
+        token_elem = root.find(".//oai:resumptionToken", ns)
+        resumption_token = token_elem.text if token_elem is not None else None
+        log_oai_progress(token_elem, len(identifiers))
+        if not resumption_token:
+            break
+
+    manifest = pd.DataFrame(identifiers)
+    timestamp = pd.Timestamp.now(tz="UTC")
+    manifest["_extract_datetime"] = timestamp
+    manifest["_context"] = context
+    manifest["_source_key"] = source_key
+    manifest["_repository_identifier"] = repository_identifier
+    manifest["_institution_ror"] = institution_ror
+    manifest["_base_url"] = base_url.rstrip("/")
+    manifest["_metadata_prefix"] = metadata_prefix
+    return manifest, manifest.head(100)
 
 def oai_extract_identifiers_by_sets(base_url: str, context: str, env: str, df_set: pd.DataFrame, iteration_limit = 1, verify=None) -> pd.DataFrame:
     records = []
@@ -134,98 +218,191 @@ def oai_extract_identifiers_by_sets(base_url: str, context: str, env: str, df_se
 
     return df, df_set, df.head(100)
 
-def oai_extract_records_by_identifiers(base_url: str, context: str, env: str, df_ids: pd.DataFrame, iteration_limit = 1, verify=None) -> pd.DataFrame:
+OAI_NAMESPACES = {
+    "oai": "http://www.openarchives.org/OAI/2.0/",
+    "dc": "http://purl.org/dc/elements/1.1/",
+}
+
+OAI_RECORD_COLUMNS = [
+    "record_id", "datestamp", "set_id", "col_id", "title", "date_issued",
+    "creators", "description", "types", "identifiers", "languages",
+    "subjects", "publishers", "relations", "rights", "formats",
+]
+
+OAI_PROVENANCE_COLUMNS = [
+    "_extract_datetime", "_context", "_source_key",
+    "_repository_identifier", "_institution_ror", "_base_url",
+    "_metadata_prefix",
+]
+
+
+def add_oai_provenance(
+    df: pd.DataFrame,
+    *,
+    context: str,
+    source_key: str,
+    repository_identifier: str,
+    institution_ror: str,
+    base_url: str,
+    metadata_prefix: str,
+    timestamp: pd.Timestamp | None = None,
+) -> pd.DataFrame:
+    """Attach the common extraction provenance contract to an OAI dataset."""
+    result = df.copy()
+    result["_extract_datetime"] = timestamp or pd.Timestamp.now(tz="UTC")
+    result["_context"] = context
+    result["_source_key"] = source_key
+    result["_repository_identifier"] = repository_identifier
+    result["_institution_ror"] = institution_ror
+    result["_base_url"] = base_url.rstrip("/")
+    result["_metadata_prefix"] = metadata_prefix
+    return result
+
+
+def parse_oai_record(record: ET.Element) -> dict | None:
+    """Parse one OAI-PMH record into the canonical raw records schema."""
+    header = record.find("oai:header", OAI_NAMESPACES)
+    metadata = record.find("oai:metadata", OAI_NAMESPACES)
+    if header is None or metadata is None or header.get("status") == "deleted":
+        return None
+
+    def _text(path: str):
+        node = metadata.find(path, OAI_NAMESPACES)
+        return node.text if node is not None else None
+
+    def _texts(path: str) -> list[str | None]:
+        return [node.text for node in metadata.findall(path, OAI_NAMESPACES)]
+
+    identifier = header.find("oai:identifier", OAI_NAMESPACES)
+    datestamp = header.find("oai:datestamp", OAI_NAMESPACES)
+    sets = [node.text for node in header.findall("oai:setSpec", OAI_NAMESPACES)]
+    return {
+        "record_id": identifier.text if identifier is not None else None,
+        "datestamp": datestamp.text if datestamp is not None else None,
+        "set_id": sets,
+        "col_id": sets[0] if sets else None,
+        "title": _text(".//dc:title"),
+        "date_issued": _text(".//dc:date"),
+        "creators": _texts(".//dc:creator"),
+        "description": _texts(".//dc:description"),
+        "types": _texts(".//dc:type"),
+        "identifiers": _texts(".//dc:identifier"),
+        "languages": _texts(".//dc:language"),
+        "subjects": _texts(".//dc:subject"),
+        "publishers": _texts(".//dc:publisher"),
+        "relations": _texts(".//dc:relation"),
+        "rights": _texts(".//dc:rights"),
+        "formats": _texts(".//dc:format"),
+    }
+
+
+def oai_extract_records_by_identifiers(
+    base_url: str,
+    context: str,
+    env: str,
+    df_ids: pd.DataFrame,
+    source_key: str,
+    repository_identifier: str,
+    institution_ror: str,
+    metadata_prefix: str = "oai_dc",
+    dev_identifier_limit: int = 2,
+    identifier_limit: int | None = None,
+    verify=None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Recover selected records with GetRecord and audit every failure."""
     records = []
-    ids_limit = 2 if env == "dev" else None
-    ids = df_ids.head(ids_limit).loc[:, "id"].tolist()
+    errors = []
+    ids_limit = dev_identifier_limit if env == "dev" else identifier_limit
+    ids = df_ids.head(ids_limit).loc[:, "record_id"].dropna().tolist()
 
     for record_id in ids:
-        params = f'/{context}?verb=GetRecord&metadataPrefix=oai_dc&identifier={record_id}'
-        url = base_url + params
+        query = urlencode(
+            {
+                "verb": "GetRecord",
+                "metadataPrefix": metadata_prefix,
+                "identifier": record_id,
+            }
+        )
+        url = f"{base_url.rstrip('/')}/{context}?{query}"
 
         print(f"Consultando: {url}")
 
         response = get_oai_response(url, verify=verify)
-        if not response or not response.ok:
-            print(f"Error al consultar: {url}")
+        if response is None or not response.ok:
+            errors.append(
+                {"record_id": record_id, "error_type": "request_failed", "url": url}
+            )
             continue
 
-        xml_content = response.text
-
-        root = ET.fromstring(xml_content)
-        ns = { 'oai': 'http://www.openarchives.org/OAI/2.0/' ,
-               'dc': 'http://www.openarchives.org/OAI/2.0/oai_dc/'
-            }
-    
-        record_nodes = root.findall('.//oai:header', ns)
+        try:
+            root = ET.fromstring(response.text)
+        except ET.ParseError:
+            errors.append(
+                {"record_id": record_id, "error_type": "invalid_xml", "url": url}
+            )
+            continue
+        record_nodes = root.findall('.//oai:record', OAI_NAMESPACES)
 
         if not record_nodes:
-            print("No se encontraron más registros.")
+            errors.append(
+                {"record_id": record_id, "error_type": "record_not_found", "url": url}
+            )
             continue
 
-        for record in record_nodes:
-            
-            # Valores simples
-            record_identifier_node = record.find('.//oai:identifier', ns)
-            
-            record_datestamp = record.find('.//oai:datestamp', ns)
-            
-            # Multivaluados
-            setspec = [e.text for e in record.findall('.//oai:setSpec', ns)]
+        parsed = parse_oai_record(record_nodes[0])
+        if parsed is None:
+            errors.append(
+                {"record_id": record_id, "error_type": "record_deleted", "url": url}
+            )
+            continue
+        records.append(parsed)
 
-            record_date = record.find('.//dc:date', ns)
-            record_title = record.find('.//dc:title', ns)
-
-            record_creator = [e.text for e in record.findall('.//dc:creator', ns)]
-            record_subject = [e.text for e in record.findall('.//dc:subject', ns)]
-            record_description = [e.text for e in record.findall('.//dc:description', ns)]
-            record_type = [e.text for e in record.findall('.//dc:type', ns)]
-            record_identifier = [e.text for e in record.findall('.//dc:identifier', ns)]
-            record_language = [e.text for e in record.findall('.//dc:language', ns)]
-            record_relation = [e.text for e in record.findall('.//dc:relation', ns)]
-            record_rights = [e.text for e in record.findall('.//dc:rights', ns)]
-            record_format = [e.text for e in record.findall('.//dc:format', ns)]
-            record_publisher = [e.text for e in record.findall('.//dc:publisher', ns)]
-            
-            records.append({
-                'record_id': record_identifier_node.text if record_identifier_node is not None else None,
-                'record_date': record_date.text if record_date is not None else None,
-                'record_title': record_title.text if record_title is not None else None,
-                'datestamp': record_datestamp.text if record_datestamp is not None else None,
-
-                'set_id': setspec,
-                'record_creator': record_creator,
-                'record_subject': record_subject,
-                'record_description': record_description,
-                'record_type': record_type,
-                'record_identifier': record_identifier,
-                'record_language': record_language,
-                'record_relation': record_relation,
-                'record_rights': record_rights,
-                'record_format': record_format,
-                'record_publisher': record_publisher
-            })
-          
-    df = pd.DataFrame(records)
-
-    timestamp = pd.Timestamp.now(tz="UTC").normalize()
-    df['_extract_datetime'] = timestamp
-
-    # convierte cada lista en columnas (set_0, set_1, ...)
-    sets_df = df['set_id'].apply(pd.Series)
-    sets_df = sets_df.rename(columns=lambda i: f'set_{i}')
-
-    # junta con record_id y (opcional) elimina la columna original
-    df_sets = pd.concat([df[['record_id']], sets_df], axis=1)
-
-    return df, df_sets, df.head(100)
+    timestamp = pd.Timestamp.now(tz="UTC")
+    recovered = add_oai_provenance(
+        pd.DataFrame(records, columns=OAI_RECORD_COLUMNS),
+        context=context,
+        source_key=source_key,
+        repository_identifier=repository_identifier,
+        institution_ror=institution_ror,
+        base_url=base_url,
+        metadata_prefix=metadata_prefix,
+        timestamp=timestamp,
+    )
+    error_df = add_oai_provenance(
+        pd.DataFrame(errors, columns=["record_id", "error_type", "url"]),
+        context=context,
+        source_key=source_key,
+        repository_identifier=repository_identifier,
+        institution_ror=institution_ror,
+        base_url=base_url,
+        metadata_prefix=metadata_prefix,
+        timestamp=timestamp,
+    )
+    return recovered, error_df, recovered.head(100)
 
 
-def oai_extract_records(base_url: str, context: str, env: str, verify=None) -> pd.DataFrame:
+def oai_extract_records(
+    base_url: str,
+    context: str,
+    env: str,
+    source_key: str,
+    repository_identifier: str,
+    institution_ror: str,
+    metadata_prefix: str = "oai_dc",
+    dev_page_limit: int = 2,
+    initial_resumption_token: str | None = None,
+    page_limit: int | None = None,
+    verify=None,
+) -> pd.DataFrame:
+    if metadata_prefix != "oai_dc":
+        raise ValueError(
+            "oai_extract_records currently supports metadata_prefix=oai_dc"
+        )
+
     records = []
-    
-    iteration_limit = 2 if env == "dev" else None
-    resumption_token = None
+
+    iteration_limit = dev_page_limit if env == "dev" else page_limit
+    resumption_token = initial_resumption_token
     iteration_count = 0
 
     total_processed = 0
@@ -237,9 +414,11 @@ def oai_extract_records(base_url: str, context: str, env: str, verify=None) -> p
         if resumption_token:
             params = f'/{context}?verb=ListRecords&resumptionToken={resumption_token}'
         else:
-            params = f'/{context}?verb=ListRecords&metadataPrefix=oai_dc'
+            params = (
+                f'/{context}?verb=ListRecords&metadataPrefix={metadata_prefix}'
+            )
 
-        url = base_url + params
+        url = base_url.rstrip("/") + params
 
         print(f"Consultando: {url}")
 
@@ -248,84 +427,39 @@ def oai_extract_records(base_url: str, context: str, env: str, verify=None) -> p
         iteration_count += 1
 
         if not response or not response.ok:
-            print(f"Error al consultar: {url}")
-            break
+            raise RuntimeError(f"No se pudo completar la cosecha OAI: {url}")
 
         xml_content = response.text
         root = ET.fromstring(xml_content)
-        ns = {
-            'oai': 'http://www.openarchives.org/OAI/2.0/',
-            'dc': 'http://purl.org/dc/elements/1.1/'
-        }
-
-        record_nodes = root.findall('.//oai:record', ns)
+        record_nodes = root.findall('.//oai:record', OAI_NAMESPACES)
 
         if not record_nodes:
             print("No se encontraron más registros.")
             break
 
         for record in record_nodes:
-            header = record.find('.//oai:header', ns)
-            identifier_node = header.find('.//oai:identifier', ns) if header is not None else None
-            datestamp_node = header.find('.//oai:datestamp', ns) if header is not None else None
-            setspec = [e.text for e in header.findall('.//oai:setSpec', ns)] if header is not None else []
-
-            metadata = record.find('.//oai:metadata', ns)
-
-            if metadata is None:
-                continue
-
-            # Valores simples
-            title = metadata.find('.//dc:title', ns)
-            date_issued = metadata.find('.//dc:date', ns)
-
-            # Multivaluados
-            setspec = [e.text for e in record.findall('.//oai:setSpec', ns)]
-
-            creators = [e.text for e in metadata.findall('.//dc:creator', ns)]
-            description = [e.text for e in metadata.findall('.//dc:description', ns)]
-            types = [e.text for e in metadata.findall('.//dc:type', ns)]
-            identifiers = [e.text for e in metadata.findall('.//dc:identifier', ns)]
-            languages = [e.text for e in metadata.findall('.//dc:language', ns)]
-            publishers = [e.text for e in metadata.findall('.//dc:publisher', ns)]
-            subjects = [e.text for e in metadata.findall('.//dc:subject', ns)]
-            relations = [e.text for e in metadata.findall('.//dc:relation', ns)]
-            rights = [e.text for e in metadata.findall('.//dc:rights', ns)]
-            formats = [e.text for e in metadata.findall('.//dc:format', ns)]
-
-            records.append({
-                'record_id': identifier_node.text if identifier_node is not None else None,
-                'datestamp': datestamp_node.text if datestamp_node is not None else None,
-                'set_id': setspec,
-                'col_id': setspec[0] if setspec else None,
-                'title': title.text if title is not None else None,
-                'date_issued': date_issued.text if date_issued is not None else None,
-                'creators': creators,
-                'description': description,
-                'types': types,
-                'identifiers': identifiers,
-                'languages': languages,
-                'subjects': subjects,
-                'publishers': publishers,
-                'relations': relations,
-                'rights': rights,
-                'formats': formats
-            })
+            parsed = parse_oai_record(record)
+            if parsed is not None:
+                records.append(parsed)
 
         total_processed += len(record_nodes)
 
-        token_elem = root.find('.//oai:resumptionToken', ns)
+        token_elem = root.find('.//oai:resumptionToken', OAI_NAMESPACES)
         resumption_token = token_elem.text if token_elem is not None else None
         log_oai_progress(token_elem, total_processed)
 
         if not resumption_token:
             break
 
-    df = pd.DataFrame(records)
-
-    timestamp = pd.Timestamp.now(tz="UTC").normalize()
-    df['_extract_datetime'] = timestamp
-    df['_context'] = context
+    df = add_oai_provenance(
+        pd.DataFrame(records, columns=OAI_RECORD_COLUMNS),
+        context=context,
+        source_key=source_key,
+        repository_identifier=repository_identifier,
+        institution_ror=institution_ror,
+        base_url=base_url,
+        metadata_prefix=metadata_prefix,
+    )
 
     return df, df.head(100)
 
