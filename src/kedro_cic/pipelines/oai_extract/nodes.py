@@ -406,6 +406,33 @@ def oai_extract_records_by_identifiers(
     return recovered, error_df, recovered.head(100)
 
 
+def oai_find_missing_record_identifiers(
+    manifest: pd.DataFrame,
+    records: pd.DataFrame,
+) -> pd.DataFrame:
+    """Return active manifest entries that are absent from harvested records."""
+    active = manifest.loc[~manifest["is_deleted"].fillna(False)].copy()
+    recovered_ids = records["record_id"].dropna().unique()
+    return (
+        active.loc[~active["record_id"].isin(recovered_ids)]
+        .drop_duplicates(subset=["record_id"], keep="last")
+        .reset_index(drop=True)
+    )
+
+
+def oai_merge_harvested_records(
+    records: pd.DataFrame,
+    recovered_records: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Consolidate bulk and GetRecord results into the latest raw snapshot."""
+    consolidated = (
+        pd.concat([records, recovered_records], ignore_index=True)
+        .drop_duplicates(subset=["record_id"], keep="last")
+        .reset_index(drop=True)
+    )
+    return consolidated, consolidated.head(100)
+
+
 def oai_extract_records(
     base_url: str,
     context: str,
@@ -417,67 +444,93 @@ def oai_extract_records(
     dev_page_limit: int = 2,
     initial_resumption_token: str | None = None,
     page_limit: int | None = None,
+    date_windows: list[dict[str, str]] | None = None,
     verify=None,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if metadata_prefix != "oai_dc":
         raise ValueError(
             "oai_extract_records currently supports metadata_prefix=oai_dc"
         )
 
     records = []
+    page_errors = []
 
     iteration_limit = dev_page_limit if env == "dev" else page_limit
-    resumption_token = initial_resumption_token
-    iteration_count = 0
+    windows = date_windows or [{}]
+    if initial_resumption_token and len(windows) > 1:
+        raise ValueError(
+            "initial_resumption_token cannot be combined with multiple date windows"
+        )
 
-    total_processed = 0
+    for window in windows:
+        unknown_keys = set(window) - {"from", "until"}
+        if unknown_keys:
+            raise ValueError(f"Unsupported OAI date window keys: {unknown_keys}")
+        resumption_token = initial_resumption_token
+        iteration_count = 0
+        window_processed = 0
 
-    while True:
-        if iteration_limit is not None and iteration_count >= iteration_limit:
-            break
+        while iteration_limit is None or iteration_count < iteration_limit:
+            if resumption_token:
+                query = {"verb": "ListRecords", "resumptionToken": resumption_token}
+            else:
+                query = {
+                    "verb": "ListRecords",
+                    "metadataPrefix": metadata_prefix,
+                    **window,
+                }
+            url = f"{base_url.rstrip('/')}/{context}?{urlencode(query)}"
+            print(f"Consultando: {url}")
+            response = get_oai_response(url, verify=verify)
+            iteration_count += 1
 
-        if resumption_token:
-            params = f'/{context}?verb=ListRecords&resumptionToken={resumption_token}'
-        else:
-            params = (
-                f'/{context}?verb=ListRecords&metadataPrefix={metadata_prefix}'
-            )
+            if response is None or not response.ok:
+                if date_windows is None:
+                    raise RuntimeError(f"No se pudo completar la cosecha OAI: {url}")
+                page_errors.append(
+                    {
+                        "from": window.get("from"),
+                        "until": window.get("until"),
+                        "resumption_token": resumption_token,
+                        "error_type": "request_failed",
+                        "url": url,
+                    }
+                )
+                break
 
-        url = base_url.rstrip("/") + params
+            try:
+                root = ET.fromstring(response.text)
+            except ET.ParseError as error:
+                if date_windows is None:
+                    raise RuntimeError(f"Respuesta XML inválida para: {url}") from error
+                page_errors.append(
+                    {
+                        "from": window.get("from"),
+                        "until": window.get("until"),
+                        "resumption_token": resumption_token,
+                        "error_type": "invalid_xml",
+                        "url": url,
+                    }
+                )
+                break
 
-        print(f"Consultando: {url}")
+            record_nodes = root.findall('.//oai:record', OAI_NAMESPACES)
+            for record in record_nodes:
+                parsed = parse_oai_record(record)
+                if parsed is not None:
+                    records.append(parsed)
 
-        response = get_oai_response(url, verify=verify)
-
-        iteration_count += 1
-
-        if not response or not response.ok:
-            raise RuntimeError(f"No se pudo completar la cosecha OAI: {url}")
-
-        xml_content = response.text
-        root = ET.fromstring(xml_content)
-        record_nodes = root.findall('.//oai:record', OAI_NAMESPACES)
-
-        if not record_nodes:
-            print("No se encontraron más registros.")
-            break
-
-        for record in record_nodes:
-            parsed = parse_oai_record(record)
-            if parsed is not None:
-                records.append(parsed)
-
-        total_processed += len(record_nodes)
-
-        token_elem = root.find('.//oai:resumptionToken', OAI_NAMESPACES)
-        resumption_token = token_elem.text if token_elem is not None else None
-        log_oai_progress(token_elem, total_processed)
-
-        if not resumption_token:
-            break
+            window_processed += len(record_nodes)
+            token_elem = root.find('.//oai:resumptionToken', OAI_NAMESPACES)
+            resumption_token = token_elem.text if token_elem is not None else None
+            log_oai_progress(token_elem, window_processed)
+            if not resumption_token:
+                break
 
     df = add_oai_provenance(
-        pd.DataFrame(records, columns=OAI_RECORD_COLUMNS),
+        pd.DataFrame(records, columns=OAI_RECORD_COLUMNS)
+        .drop_duplicates(subset=["record_id"], keep="last")
+        .reset_index(drop=True),
         context=context,
         source_key=source_key,
         repository_identifier=repository_identifier,
@@ -486,7 +539,19 @@ def oai_extract_records(
         metadata_prefix=metadata_prefix,
     )
 
-    return df, df.head(100)
+    errors = add_oai_provenance(
+        pd.DataFrame(
+            page_errors,
+            columns=["from", "until", "resumption_token", "error_type", "url"],
+        ),
+        context=context,
+        source_key=source_key,
+        repository_identifier=repository_identifier,
+        institution_ror=institution_ror,
+        base_url=base_url,
+        metadata_prefix=metadata_prefix,
+    )
+    return df, errors, df.head(100)
 
 def oai_extract_sets(base_url, context, env, verify=None, iteration_limit=None):
 

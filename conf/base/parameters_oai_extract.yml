@@ -11,6 +11,8 @@ oai_extract_options:
     institution_ror: https://ror.org/03cqe8w59
     metadata_prefix: oai_dc
     dev_page_limit: 2
+    dev_identifier_limit: 2
+    identifier_limit: null
     initial_resumption_token: null
     page_limit: null
     date_windows: null

@@ -1,11 +1,12 @@
 from unittest.mock import patch
 
 import pandas as pd
-
 from kedro_cic.pipelines.oai_extract.nodes import (
     oai_extract_identifiers,
     oai_extract_records,
     oai_extract_records_by_identifiers,
+    oai_find_missing_record_identifiers,
+    oai_merge_harvested_records,
 )
 
 
@@ -130,7 +131,7 @@ def test_extract_records_uses_dev_limit_and_adds_provenance() -> None:
         "kedro_cic.pipelines.oai_extract.nodes.get_oai_response",
         side_effect=responses,
     ) as get_response:
-        records, preview = oai_extract_records(
+        records, errors, preview = oai_extract_records(
             base_url="https://repositorio.uca.edu.ar/oai/",
             context="request",
             env="dev",
@@ -142,6 +143,7 @@ def test_extract_records_uses_dev_limit_and_adds_provenance() -> None:
         )
 
     assert len(records) == 2
+    assert errors.empty
     assert len(preview) == 2
     assert get_response.call_count == 2
     assert get_response.call_args_list[0].args[0] == (
@@ -162,13 +164,44 @@ def test_extract_records_uses_dev_limit_and_adds_provenance() -> None:
     assert records["_extract_datetime"].notna().all()
 
 
+def test_finds_only_active_identifiers_missing_from_bulk_records() -> None:
+    manifest = pd.DataFrame(
+        {
+            "record_id": ["present", "missing", "deleted"],
+            "is_deleted": [False, False, True],
+        }
+    )
+    records = pd.DataFrame({"record_id": ["present"]})
+
+    missing = oai_find_missing_record_identifiers(manifest, records)
+
+    assert missing["record_id"].tolist() == ["missing"]
+
+
+def test_merges_bulk_and_recovered_records_preferring_recovered() -> None:
+    bulk = pd.DataFrame(
+        {"record_id": ["one", "two"], "title": ["One", "Old title"]}
+    )
+    recovered = pd.DataFrame(
+        {"record_id": ["two", "three"], "title": ["New title", "Three"]}
+    )
+
+    consolidated, preview = oai_merge_harvested_records(bulk, recovered)
+
+    assert consolidated["record_id"].tolist() == ["one", "two", "three"]
+    assert consolidated.loc[consolidated["record_id"] == "two", "title"].item() == (
+        "New title"
+    )
+    assert len(preview) == 3
+
+
 def test_list_records_and_get_record_share_canonical_schema() -> None:
     response = _Response(_page("oai:example:1"))
     with patch(
         "kedro_cic.pipelines.oai_extract.nodes.get_oai_response",
         return_value=response,
     ):
-        bulk, _ = oai_extract_records(
+        bulk, _, _ = oai_extract_records(
             base_url="https://example.edu/oai",
             context="request",
             env="full",
@@ -242,7 +275,7 @@ def test_extract_records_can_resume_from_token() -> None:
         "kedro_cic.pipelines.oai_extract.nodes.get_oai_response",
         return_value=_Response(_page("oai:example:19500")),
     ) as get_response:
-        records, _ = oai_extract_records(
+        records, errors, _ = oai_extract_records(
             base_url="https://example.edu/oai",
             context="request",
             env="full",
@@ -253,9 +286,33 @@ def test_extract_records_can_resume_from_token() -> None:
         )
 
     assert records["record_id"].tolist() == ["oai:example:19500"]
+    assert errors.empty
     assert get_response.call_args.args[0].endswith(
-        "?verb=ListRecords&resumptionToken=oai_dc////19500"
+        "?verb=ListRecords&resumptionToken=oai_dc%2F%2F%2F%2F19500"
     )
+
+
+def test_extract_records_audits_failed_window_and_continues() -> None:
+    with patch(
+        "kedro_cic.pipelines.oai_extract.nodes.get_oai_response",
+        side_effect=[None, _Response(_page("oai:example:2026"))],
+    ):
+        records, errors, _ = oai_extract_records(
+            base_url="https://example.edu/oai",
+            context="request",
+            env="full",
+            source_key="example",
+            repository_identifier="example.edu",
+            institution_ror="https://ror.org/example",
+            date_windows=[
+                {"from": "2025-01-01", "until": "2025-12-31"},
+                {"from": "2026-01-01", "until": "2026-12-31"},
+            ],
+        )
+
+    assert records["record_id"].tolist() == ["oai:example:2026"]
+    assert errors["error_type"].tolist() == ["request_failed"]
+    assert errors["from"].tolist() == ["2025-01-01"]
 
 
 def test_extract_records_fails_instead_of_saving_partial_harvest() -> None:

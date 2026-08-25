@@ -65,9 +65,30 @@
     kedro-viz:
       layer: raw
 
+"raw/oai/records_recovered_dev":
+  type: pandas.CSVDataset
+  filepath: "data/01_raw/oai/records_recovered_dev.csv"
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/oai/missing_record_identifiers#parquet":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/oai/missing_record_identifiers.parquet"
+  metadata:
+    kedro-viz:
+      layer: raw
+
 "raw/oai/record_errors#parquet":
   type: pandas.ParquetDataset
   filepath: "data/01_raw/oai/record_errors.parquet"
+  metadata:
+    kedro-viz:
+      layer: raw
+
+"raw/oai/record_page_errors#parquet":
+  type: pandas.ParquetDataset
+  filepath: "data/01_raw/oai/record_page_errors.parquet"
   metadata:
     kedro-viz:
       layer: raw
