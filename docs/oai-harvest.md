@@ -271,3 +271,34 @@ kedro run --pipeline oai_extract --from-nodes oai_extract_records
 `initial_resumption_token` es una herramienta de diagnóstico o reanudación.
 No puede combinarse con más de una ventana temporal, porque cada ventana tiene
 su propia secuencia de tokens.
+
+## Notebooks de desarrollo
+
+Los notebooks de `notebooks/sources/oai/` permiten ejecutar las funciones por
+separado, inspeccionar sus resultados y ensayar cambios antes de trasladarlos
+a `nodes.py`. No escriben en PostgreSQL y se versionan sin outputs ni
+contadores de ejecución.
+
+Extracción:
+
+- `01_extract/oai_extract_get_oai_response.ipynb` prueba el cliente HTTP.
+- `01_extract/oai_extract_identifiers.ipynb` prueba el manifiesto.
+- `01_extract/oai_extract_records.ipynb` prueba la cosecha masiva.
+- `01_extract/oai_extract_records_by_identifiers.ipynb` prueba `GetRecord`.
+- `01_extract/oai_reconcile_records.ipynb` prueba faltantes y consolidación.
+
+Carga:
+
+- `02_load/oai_load_identifiers.ipynb` muestra las dos tablas del manifiesto.
+- `02_load/oai_load_records.ipynb` muestra las doce tablas de registros.
+
+Cada definición ocupa una celda propia y debe coincidir con su implementación
+en `nodes.py`. Los notebooks de extracción se regeneran desde ese código con:
+
+```bash
+python notebooks/sources/oai/sync_notebooks.py
+```
+
+El regenerador sirve para restablecer la sincronía y limpiar todas las celdas.
+Como sobrescribe los notebooks activos de extracción, cualquier experimento
+que deba conservarse tiene que trasladarse primero a `nodes.py` y sus tests.
