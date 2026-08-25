@@ -22,6 +22,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                 "params:oai_extract_options.dev_page_limit",
                 "params:oai_extract_options.initial_resumption_token",
                 "params:oai_extract_options.page_limit",
+                "params:oai_extract_options.date_windows",
             ],
             outputs=["raw/oai/identifiers#parquet", "raw/oai/identifiers_dev"],
         ),

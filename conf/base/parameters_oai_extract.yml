@@ -13,5 +13,6 @@ oai_extract_options:
     dev_page_limit: 2
     initial_resumption_token: null
     page_limit: null
+    date_windows: null
     iteration_limit: 1
     env: dev

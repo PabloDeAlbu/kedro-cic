@@ -95,6 +95,31 @@ def test_extract_identifiers_builds_manifest_with_deleted_records() -> None:
     assert len(preview) == 2
 
 
+def test_extract_identifiers_combines_and_deduplicates_date_windows() -> None:
+    with patch(
+        "kedro_cic.pipelines.oai_extract.nodes.get_oai_response",
+        return_value=_Response(_identifiers_page()),
+    ) as get_response:
+        manifest, _ = oai_extract_identifiers(
+            base_url="https://example.edu/oai",
+            context="request",
+            env="full",
+            source_key="example",
+            repository_identifier="example.edu",
+            institution_ror="https://ror.org/example",
+            date_windows=[
+                {"from": "2025-01-01", "until": "2025-12-31"},
+                {"from": "2026-01-01", "until": "2026-12-31"},
+            ],
+        )
+
+    assert get_response.call_count == 2
+    assert len(manifest) == 2
+    assert "from=2025-01-01&until=2025-12-31" in (
+        get_response.call_args_list[0].args[0]
+    )
+
+
 def test_extract_records_uses_dev_limit_and_adds_provenance() -> None:
     responses = [
         _Response(_page("oai:repositorio.uca.edu.ar:1", "next-token")),

@@ -86,59 +86,84 @@ def oai_extract_identifiers(
     dev_page_limit: int = 2,
     initial_resumption_token: str | None = None,
     page_limit: int | None = None,
+    date_windows: list[dict[str, str]] | None = None,
     verify=None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Build the repository manifest from OAI-PMH ListIdentifiers."""
+    """Build a manifest, optionally harvesting independent date windows."""
     identifiers = []
     iteration_limit = dev_page_limit if env == "dev" else page_limit
-    resumption_token = initial_resumption_token
-    iteration_count = 0
+    windows = date_windows or [{}]
+    if initial_resumption_token and len(windows) > 1:
+        raise ValueError(
+            "initial_resumption_token cannot be combined with multiple date windows"
+        )
 
-    while iteration_limit is None or iteration_count < iteration_limit:
-        if resumption_token:
-            params = (
-                f"/{context}?verb=ListIdentifiers"
-                f"&resumptionToken={resumption_token}"
-            )
-        else:
-            params = (
-                f"/{context}?verb=ListIdentifiers"
-                f"&metadataPrefix={metadata_prefix}"
-            )
-        url = base_url.rstrip("/") + params
-        print(f"Consultando: {url}")
+    for window in windows:
+        unknown_keys = set(window) - {"from", "until"}
+        if unknown_keys:
+            raise ValueError(f"Unsupported OAI date window keys: {unknown_keys}")
+        resumption_token = initial_resumption_token
+        iteration_count = 0
+        window_processed = 0
 
-        response = get_oai_response(url, verify=verify)
-        if response is None or not response.ok:
-            raise RuntimeError(f"No se pudo completar el manifiesto OAI: {url}")
-
-        try:
-            root = ET.fromstring(response.text)
-        except ET.ParseError as error:
-            raise RuntimeError(f"Respuesta XML inválida para: {url}") from error
-
-        ns = {"oai": "http://www.openarchives.org/OAI/2.0/"}
-        headers = root.findall(".//oai:header", ns)
-        for header in headers:
-            identifier = header.find("oai:identifier", ns)
-            datestamp = header.find("oai:datestamp", ns)
-            identifiers.append(
-                {
-                    "record_id": identifier.text if identifier is not None else None,
-                    "datestamp": datestamp.text if datestamp is not None else None,
-                    "set_id": [node.text for node in header.findall("oai:setSpec", ns)],
-                    "is_deleted": header.get("status") == "deleted",
+        while iteration_limit is None or iteration_count < iteration_limit:
+            if resumption_token:
+                query = {
+                    "verb": "ListIdentifiers",
+                    "resumptionToken": resumption_token,
                 }
-            )
+            else:
+                query = {
+                    "verb": "ListIdentifiers",
+                    "metadataPrefix": metadata_prefix,
+                    **window,
+                }
+            url = f"{base_url.rstrip('/')}/{context}?{urlencode(query)}"
+            print(f"Consultando: {url}")
 
-        iteration_count += 1
-        token_elem = root.find(".//oai:resumptionToken", ns)
-        resumption_token = token_elem.text if token_elem is not None else None
-        log_oai_progress(token_elem, len(identifiers))
-        if not resumption_token:
-            break
+            response = get_oai_response(url, verify=verify)
+            if response is None or not response.ok:
+                raise RuntimeError(f"No se pudo completar el manifiesto OAI: {url}")
 
-    manifest = pd.DataFrame(identifiers)
+            try:
+                root = ET.fromstring(response.text)
+            except ET.ParseError as error:
+                raise RuntimeError(f"Respuesta XML inválida para: {url}") from error
+
+            ns = {"oai": "http://www.openarchives.org/OAI/2.0/"}
+            headers = root.findall(".//oai:header", ns)
+            for header in headers:
+                identifier = header.find("oai:identifier", ns)
+                datestamp = header.find("oai:datestamp", ns)
+                identifiers.append(
+                    {
+                        "record_id": (
+                            identifier.text if identifier is not None else None
+                        ),
+                        "datestamp": datestamp.text if datestamp is not None else None,
+                        "set_id": [
+                            node.text for node in header.findall("oai:setSpec", ns)
+                        ],
+                        "is_deleted": header.get("status") == "deleted",
+                    }
+                )
+
+            iteration_count += 1
+            window_processed += len(headers)
+            token_elem = root.find(".//oai:resumptionToken", ns)
+            resumption_token = token_elem.text if token_elem is not None else None
+            log_oai_progress(token_elem, window_processed)
+            if not resumption_token:
+                break
+
+    manifest = (
+        pd.DataFrame(
+            identifiers,
+            columns=["record_id", "datestamp", "set_id", "is_deleted"],
+        )
+        .drop_duplicates(subset=["record_id"], keep="last")
+        .reset_index(drop=True)
+    )
     timestamp = pd.Timestamp.now(tz="UTC")
     manifest["_extract_datetime"] = timestamp
     manifest["_context"] = context
