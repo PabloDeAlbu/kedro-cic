@@ -38,6 +38,9 @@ Examples:
 
 ## OAI-PMH por fuente
 
+El procedimiento completo de configuración, cosecha, reconciliación, controles
+y carga está en [docs/oai-harvest.md](docs/oai-harvest.md).
+
 El área raw conserva el último snapshot OAI descargado, independientemente de
 la institución:
 
@@ -61,16 +64,15 @@ oai_extract_options:
   env: dev
 ```
 
-La prueba acotada de registros se ejecuta en dos pasos:
+La prueba acotada se ejecuta con el pipeline completo:
 
 ```bash
-kedro run --pipeline oai_extract --nodes oai_extract_records
-kedro run --pipeline oai_load --nodes oai_load_records
+kedro run --pipeline oai_extract
 ```
 
-El modo `dev` limita la extracción a `dev_page_limit` páginas y la carga a un
-máximo de 1.000 registros. La tabla landing conserva solamente el último
-batch; debe procesarse aguas abajo antes de cargar otra fuente.
+El modo `dev` limita la extracción a `dev_page_limit` páginas por ventana y la
+recuperación individual a `dev_identifier_limit` identificadores. La carga se
+realiza después, mediante `oai_load`, cuando el snapshot fue validado.
 
 ## Notebooks
 - Start an interactive environment: `kedro jupyter lab` (or `kedro jupyter notebook`).
