@@ -13,6 +13,7 @@ ACTIVE_NOTEBOOKS = {
     "01_extract/oai_reconcile_records.ipynb",
     "02_load/oai_load_identifiers.ipynb",
     "02_load/oai_load_records.ipynb",
+    "03_profile/oai_raw_profile.ipynb",
 }
 
 

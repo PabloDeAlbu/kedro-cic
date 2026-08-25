@@ -292,13 +292,13 @@ Carga:
 - `02_load/oai_load_identifiers.ipynb` muestra las dos tablas del manifiesto.
 - `02_load/oai_load_records.ipynb` muestra las doce tablas de registros.
 
+Perfilamiento:
+
+- `03_profile/oai_raw_profile.ipynb` controla cobertura, procedencia, calidad
+  y distribuciones del último snapshot raw sin cosechar ni cargar datos.
+
 Cada definición ocupa una celda propia y debe coincidir con su implementación
-en `nodes.py`. Los notebooks de extracción se regeneran desde ese código con:
-
-```bash
-python notebooks/sources/oai/sync_notebooks.py
-```
-
-El regenerador sirve para restablecer la sincronía y limpiar todas las celdas.
-Como sobrescribe los notebooks activos de extracción, cualquier experimento
-que deba conservarse tiene que trasladarse primero a `nodes.py` y sus tests.
+en `nodes.py`. El flujo de trabajo es experimentar en el notebook, trasladar
+el cambio validado a `nodes.py`, actualizar sus tests y finalmente dejar la
+celda limpia y alineada. Los tests fallan si una función diverge o si se
+versionan outputs o contadores de ejecución.
